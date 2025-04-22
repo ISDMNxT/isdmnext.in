@@ -82,13 +82,13 @@
 </style>
 
 <?php
-  $job_list = $this->db->select('j.*,c.institute_name as center_name,i.industry,d.department,jr.role,state.STATE_NAME,district.DISTRICT_NAME,c.logo,ei.about_company, ei.website,rir.id as rir, DATE_FORMAT(rir.created_at,"%d-%m-%Y") as applied_date,rir.status as rstatus')
+  $job_list = $this->db->select('j.*,c.institute_name as center_name,i.industry,jr.role,state.STATE_NAME,district.DISTRICT_NAME,c.logo,ei.about_company, ei.website,rir.id as rir, DATE_FORMAT(rir.created_at,"%d-%m-%Y") as applied_date,rir.status as rstatus')
                     ->from('jobs as j')
                     ->join('received_interview_request as rir', 'rir.student_id = '.$this->student_model->studentId().' and rir.job_id = j.id', 'left')
                     ->join('centers as c', 'c.id = j.employer_id', 'left')
                     ->join('employer_info as ei', 'ei.employer_id = c.id', 'left')
                     ->join('industry as i', 'i.id = j.industry_id', 'left')
-                    ->join('department as d', 'd.id = j.department_id', 'left')
+                    // ->join('department as d', 'd.id = j.department_id', 'left')
                     ->join('job_role as jr', 'jr.id = j.role_id', 'left')
                     ->join('state', 'state.STATE_ID = j.state_id', 'left')
                     ->join('district', 'district.DISTRICT_ID = j.city_id and district.STATE_ID = state.STATE_ID', 'left')

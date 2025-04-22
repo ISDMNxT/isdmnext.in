@@ -258,7 +258,7 @@ if ($this->center_model->isCenter() && table_exists('manual_notifications')) { ?
     </div>
     <div class="card">
       <i class="fas fa-check-circle"></i>
-      <h2><?= $this->db->where('is_admin_approved',2)->get('exams_master')->num_rows() ?></h2>
+      <h2><?= $this->db->where('center_id',$this->center_model->loginId())->get('exams_master')->num_rows() ?></h2>
       <p>Exam Conducted</p>
     </div>
     <div class="card">
