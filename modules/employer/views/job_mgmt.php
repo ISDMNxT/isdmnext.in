@@ -152,20 +152,20 @@
                             </div> -->
 
                             <div class="form-group mb-4 col-lg-6 col-xs-12 col-sm-12">
-    <label class="form-label required">Education</label>
-    <select id="education_id" name="education_id" class="form-control">
-        <option value="">Select Education</option>
-        <?php
-        $education = $this->db->where('status', 1)->order_by('qualification', 'ASC')->get('isdm_education');
-        if ($education->num_rows()) {
-            foreach ($education->result() as $row) {
-                $sel = (!empty($form['education_id']) && $form['education_id'] == $row->id) ? "selected='selected'" : "";
-                echo '<option value="' . $row->id . '" ' . $sel . '>' . $row->qualification . '</option>';
-            }
-        }
-        ?>
-    </select> 
-</div>
+                                <label class="form-label required">Education</label>
+                                <select id="education_id" name="education_id" class="form-control">
+                                    <option value="">Select Education</option>
+                                    <?php
+                                    $education = $this->db->where('status', 1)->order_by('qualification', 'ASC')->get('isdm_education');
+                                    if ($education->num_rows()) {
+                                        foreach ($education->result() as $row) {
+                                            $sel = (!empty($form['education_id']) && $form['education_id'] == $row->id) ? "selected='selected'" : "";
+                                            echo '<option value="' . $row->id . '" ' . $sel . '>' . $row->qualification . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select> 
+                            </div>
 
 
                             <div class="form-group mb-4 col-lg-6 col-xs-12 col-sm-12">
