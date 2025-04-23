@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', function (e) {
             { 'data': 'job_title' },
             { 'data': 'center_name' },
             { 'data': 'industry' },
-            // { 'data': 'department' },
             { 'data': 'qualification' },
             { 'data': 'role' },
             { 'data': 'openings' },
