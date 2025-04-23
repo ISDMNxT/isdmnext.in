@@ -105,9 +105,10 @@
           <h2 style="color:black;"><?= $value['job_title'] ?></h2>
           <p style="color:black;">Company: <?= $value['center_name'] ?> | &#127760; <?= $value['website'] ?></p>
           <div class="job-icons">
-              <span><i class="fa-solid fa-briefcase"></i>&nbsp;<?= $value['experience'] ?> Yrs</span>
-              <span><i class="fa-solid fa-indian-rupee-sign"></i>&nbsp;<?= $value['salary'] ?></span>
-              <span><i class="fa-solid fa-location-dot"></i>&nbsp;<?= $value['work_location'] ?></span>
+            <span><i class="fa-solid fa-graduation-cap"></i>&nbsp;<?= $value['qualification'] ?></span>
+            <span><i class="fa-solid fa-briefcase"></i>&nbsp;<?= $value['experience'] ?> Yrs</span>
+            <span><i class="fa-solid fa-indian-rupee-sign"></i>&nbsp;<?= $value['salary'] ?></span>
+            <span><i class="fa-solid fa-location-dot"></i>&nbsp;<?= $value['work_location'] ?></span>
           </div>
           <p style="color:black;"><i class="fa-solid fa-file-alt"></i>
             <?php echo sortString($value['job_highlights']); ?>
