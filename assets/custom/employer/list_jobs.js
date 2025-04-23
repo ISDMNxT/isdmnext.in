@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
             { 'data': 'center_name' },
             { 'data': 'industry' },
             // { 'data': 'department' },
-            { 'data': 'education' },
+            { 'data': 'qualification' },
             { 'data': 'role' },
             { 'data': 'openings' },
             { 'data': null }
