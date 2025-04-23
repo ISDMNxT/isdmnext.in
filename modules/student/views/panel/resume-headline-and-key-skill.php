@@ -66,47 +66,49 @@
                             </select>
                         </div>
                         <div class="form-group mb-4 col-lg-12 col-xs-12 col-sm-12">
-                            <label class="form-label required">Industry</label>
-                            <div id="wwlist_job_role" class="row">
-                            <?php
-                                $job_skill1 = $this->db->select('i.id, i.industry')
-                                                ->from('industry as i')
-                                                ->where('i.status',1)->get()->result_array();
-                                $html = '';
-                                foreach($job_skill1 as $key => $val){
-                                    $chk = "";
-                                    if(in_array($val['id'], $industries)){
-                                        $chk = "checked='checked'";
-                                    }
-                                    $html .='<div class="form-group col-md-6 mt-2">
-                                                <input type="checkbox" name="industries[]" id="industri_'.$val['id'].'" class="form-check-input group_industri" value="'.$val['id'].'" '.$chk.'  />
-                                                <label class="form-label">'.$val['industry'].'</label>
-                                            </div>';
-                                }
-                                echo $html;
-                            ?>
-                            </div>
-                        </div>
-                        <div class="form-group mb-4 col-lg-12 col-xs-12 col-sm-12">
-                            <label class="form-label required">Key Skill's</label>
-                            <div id="list_job_role" class="row">
-                            <?php
-                                $job_skill = $this->db->select('*')->from('job_skill')->where('status',1)->get()->result_array();
-                                $html = '';
-                                foreach($job_skill as $key => $val){
-                                    $chk = "";
-                                    if(in_array($val['id'], $key_skills)){
-                                        $chk = "checked='checked'";
-                                    }
-                                    $html .='<div class="form-group col-md-3 mt-2">
-                                                <input type="checkbox" name="key_skills[]" id="skill_'.$val['id'].'" class="form-check-input group_skill" value="'.$val['id'].'" '.$chk.'  />
-                                                <label class="form-label">'.$val['skill'].'</label>
-                                            </div>';
-                                }
-                                echo $html;
-                            ?>
-                            </div>
-                        </div>
+    <label class="form-label required">Industry</label>
+    <div class="dropdown">
+        <button class="btn btn-outline-primary dropdown-toggle w-100 text-left" type="button" id="industryDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span id="industryDropdownText">Select Industry</span>
+        </button>
+        <div class="dropdown-menu w-100 p-3" aria-labelledby="industryDropdown" style="max-height: 300px; overflow-y: auto;">
+            <?php
+            $industries = $this->db->select('id, industry')->from('industry')->where('status',1)->order_by('industry','ASC')->get()->result_array();
+            foreach($industries as $val){
+                $chk = (!empty($selected_industries) && in_array($val['id'], $selected_industries)) ? "checked='checked'" : "";
+                echo '<div class="form-check">
+                        <input class="form-check-input industry-checkbox" type="checkbox" name="industries[]" value="'.$val['id'].'" id="industry_'.$val['id'].'" '.$chk.'>
+                        <label class="form-check-label" for="industry_'.$val['id'].'">'.$val['industry'].'</label>
+                      </div>';
+            }
+            ?>
+        </div>
+    </div>
+    <div id="selectedIndustries" class="mt-2"></div>
+</div>
+
+<div class="form-group mb-4 col-lg-12 col-xs-12 col-sm-12">
+    <label class="form-label required">Key Skill's</label>
+    <div class="dropdown">
+        <button class="btn btn-outline-primary dropdown-toggle w-100 text-left" type="button" id="keySkillsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span id="keySkillsDropdownText">Select Key Skills</span>
+        </button>
+        <div class="dropdown-menu w-100 p-3" aria-labelledby="keySkillsDropdown" style="max-height: 300px; overflow-y: auto;">
+            <?php
+            $job_skill = $this->db->select('id, skill')->from('job_skill')->where('status',1)->order_by('skill','ASC')->get()->result_array();
+            foreach($job_skill as $val){
+                $chk = (isset($key_skills) && in_array($val['id'], $key_skills)) ? "checked='checked'" : "";
+                echo '<div class="form-check">
+                        <input class="form-check-input skill-checkbox" type="checkbox" name="key_skills[]" value="'.$val['id'].'" id="skill_'.$val['id'].'" '.$chk.'>
+                        <label class="form-check-label" for="skill_'.$val['id'].'">'.$val['skill'].'</label>
+                      </div>';
+            }
+            ?>
+        </div>
+    </div>
+    <div id="selectedKeySkills" class="mt-2"></div>
+</div>
+
 
                         <div class="form-group mb-4 col-lg-12 col-xs-12 col-sm-12">
                             <label class="form-label required">Languages Known</label>
@@ -133,3 +135,43 @@
         </div>
     </form>
 </div>
+
+<!-- Your existing form and HTML stays exactly the same above -->
+
+<!-- Place this block at the very end of your file -->
+<!-- ✅ Include Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- ✅ Include jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ✅ Industry & Key Skill Dropdown Functionality -->
+<script>
+$(document).ready(function () {
+    // Update the text in the dropdown button and show badges
+    function updateDropdownText(checkboxClass, displayId, buttonTextId, defaultText) {
+        let selected = [];
+        $(checkboxClass + ':checked').each(function () {
+            selected.push($(this).next('label').text());
+        });
+        $(buttonTextId).text(selected.length > 0 ? selected.length + ' selected' : defaultText);
+
+        let badges = selected.map(item => `<span class="badge badge-info mr-1">${item}</span>`);
+        $(displayId).html(badges.join(''));
+    }
+
+    // Events
+    $(document).on('change', '.industry-checkbox', function () {
+        updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+    });
+
+    // If you later convert Key Skills to dropdown, reuse this:
+    // $(document).on('change', '.skill-checkbox', function () {
+    //     updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
+    // });
+
+    // Initialize on page load
+    updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+});
+</script>

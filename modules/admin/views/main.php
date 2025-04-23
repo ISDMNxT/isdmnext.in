@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="{base_url}assets/icon-picker/dist/iconpicker-1.5.0.css">
     <script src="{base_url}assets/icon-picker/dist/iconpicker-1.5.0.js"></script>
     <link rel="stylesheet" href="{base_url}assets/custom/custom.css">
+    
     <style>
         tr .eye-btn {
             display: none;

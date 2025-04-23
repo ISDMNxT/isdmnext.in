@@ -435,4 +435,31 @@ document.addEventListener('DOMContentLoaded', function (d) {
             }
         })
     });
+$(document).ready(function () {
+    function updateDropdownText(checkboxClass, displayId, buttonTextId, defaultText) {
+        let selected = [];
+        $(checkboxClass + ':checked').each(function () {
+            selected.push($(this).next('label').text());
+        });
+        $(buttonTextId).text(selected.length > 0 ? selected.length + ' selected' : defaultText);
+
+        let badges = selected.map(item => `<span class="badge badge-info mr-1">${item}</span>`);
+        $(displayId).html(badges.join(''));
+    }
+
+    // For Industry (already there)
+    $(document).on('change', '.industry-checkbox', function () {
+        updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+    });
+    updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+
+    // ✅ For Key Skills
+    $(document).on('change', '.skill-checkbox', function () {
+        updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
+    });
+    updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
+});
+
+
+        
 })
