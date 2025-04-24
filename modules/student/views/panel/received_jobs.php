@@ -95,13 +95,13 @@
 </style>
 
 <?php
-  $job_list = $this->db->select('sir.id as sir_id,sir.student_status,j.*,c.institute_name as center_name,i.industry,d.department,jr.role,state.STATE_NAME,district.DISTRICT_NAME,c.logo,ei.about_company, ei.website')
+  $job_list = $this->db->select('sir.id as sir_id,sir.student_status,j.*,c.institute_name as center_name,i.industry,e.qualification,jr.role,state.STATE_NAME,district.DISTRICT_NAME,c.logo,ei.about_company, ei.website')
                     ->from('send_interview_request as sir')
                     ->join('jobs as j', 'j.id = sir.job_id', 'left')
                     ->join('centers as c', 'c.id = j.employer_id', 'left')
                     ->join('employer_info as ei', 'ei.employer_id = c.id', 'left')
                     ->join('industry as i', 'i.id = j.industry_id', 'left')
-                    ->join('department as d', 'd.id = j.department_id', 'left')
+                    ->join('isdm_education as e', 'e.id = j.education_id', 'left')
                     ->join('job_role as jr', 'jr.id = j.role_id', 'left')
                     ->join('state', 'state.STATE_ID = j.state_id', 'left')
                     ->join('district', 'district.DISTRICT_ID = j.city_id and district.STATE_ID = state.STATE_ID', 'left')

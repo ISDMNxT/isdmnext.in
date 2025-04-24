@@ -436,6 +436,9 @@ document.addEventListener('DOMContentLoaded', function (d) {
         })
     });
 $(document).ready(function () {
+    $('select[name="experience"]').val('');
+    $('select[name="fluancy_in_english"]').val('');
+
     function updateDropdownText(checkboxClass, displayId, buttonTextId, defaultText) {
         let selected = [];
         $(checkboxClass + ':checked').each(function () {
@@ -447,17 +450,30 @@ $(document).ready(function () {
         $(displayId).html(badges.join(''));
     }
 
-    // For Industry (already there)
-    $(document).on('change', '.industry-checkbox', function () {
-        updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
-    });
-    updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+    // Clear all dropdown checkboxes on page load
+$('.industry-checkbox, .skill-checkbox, .language-checkbox, .role-checkbox').prop('checked', false);
 
-    // ✅ For Key Skills
-    $(document).on('change', '.skill-checkbox', function () {
-        updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
-    });
+// Reset the visible dropdown text and badges
+updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
+updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
+updateDropdownText('.language-checkbox', '#selectedLanguages', '#languageDropdownText', 'Select Languages');
+updateDropdownText('.role-checkbox', '#selectedRoles', '#roleDropdownText', 'Select Role');
+
+
+    $(document).on('change', '.industry-checkbox', () => updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry'));
+    $(document).on('change', '.skill-checkbox', () => updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills'));
+    $(document).on('change', '.language-checkbox', () => updateDropdownText('.language-checkbox', '#selectedLanguages', '#languageDropdownText', 'Select Languages'));
+    $(document).on('change', '.role-checkbox', () => updateDropdownText('.role-checkbox', '#selectedRoles', '#roleDropdownText', 'Select Role'));
+
+    updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
     updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
+    updateDropdownText('.language-checkbox', '#selectedLanguages', '#languageDropdownText', 'Select Languages');
+    updateDropdownText('.role-checkbox', '#selectedRoles', '#roleDropdownText', 'Select Role');
+
+    window.getSelectedIndustryIDs = () => $('.industry-checkbox:checked').map(function () { return $(this).val(); }).get();
+    window.getSelectedRoleIDs = () => $('.role-checkbox:checked').map(function () { return $(this).val(); }).get();
+    window.getSelectedKeySkills = () => $('.skill-checkbox:checked').map(function () { return $(this).val(); }).get();
+    window.getSelectedLanguages = () => $('.language-checkbox:checked').map(function () { return $(this).val(); }).get();
 });
 
 
