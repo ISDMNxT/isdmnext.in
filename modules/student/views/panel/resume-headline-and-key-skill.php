@@ -143,16 +143,7 @@
                 <span id="keySkillsDropdownText">Select Key Skills</span>
             </button>
             <div class="dropdown-menu w-100 p-3" aria-labelledby="keySkillsDropdown" style="max-height: 300px; overflow-y: auto;">
-                <?php
-                $job_skill = $this->db->select('id, skill')->from('job_skill')->where('status',1)->order_by('skill','ASC')->get()->result_array();
-                foreach($job_skill as $val){
-                    $chk = (isset($key_skills) && in_array($val['id'], $key_skills)) ? "checked='checked'" : "";
-                    echo '<div class="form-check ml-2">
-                            <input class="form-check-input skill-checkbox" type="checkbox" name="key_skills[]" value="'.$val['id'].'" id="skill_'.$val['id'].'" '.$chk.'>
-                            <label class="form-check-label my-1" for="skill_'.$val['id'].'">'.$val['skill'].'</label>
-                          </div>';
-                }
-                ?>
+                
             </div>
         </div>
     </div>
@@ -249,4 +240,35 @@
 });
 
     });
+
+    $(document).on('change', '.role-checkbox', function () {
+    let selectedRoles = $('.role-checkbox:checked').map(function () {
+        return $(this).val();
+    }).get();
+
+    $.ajax({
+        url: base_url + 'student/get_skills_for_roles',
+        type: 'POST',
+        data: { role_ids: selectedRoles },
+        dataType: 'json',
+        success: function (response) {
+            if (response.status) {
+                let html = '';
+                response.skills.forEach(skill => {
+                    html += `<div class="form-check ml-2">
+                                <input class="form-check-input skill-checkbox" type="checkbox" name="key_skills[]" value="${skill.id}" id="skill_${skill.id}">
+                                <label class="form-check-label my-1" for="skill_${skill.id}">${skill.skill}</label>
+                             </div>`;
+                });
+                $('#keySkillsDropdownText').text('Select Key Skills');
+                $('#selectedKeySkills').html('');
+                $('.dropdown-menu[aria-labelledby="keySkillsDropdown"]').html(html);
+            }
+        },
+        error: function () {
+            alert('Failed to load skills. Check server.');
+        }
+    });
+});
+
 </script>
