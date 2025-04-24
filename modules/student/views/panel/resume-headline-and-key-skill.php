@@ -98,7 +98,7 @@
                     $chk = (!empty($selected_industries) && in_array($val['id'], $selected_industries)) ? "checked='checked'" : "";
                     echo '<div class="form-check ml-2">
                             <input class="form-check-input industry-checkbox "  type="checkbox" name="industries[]" value="'.$val['id'].'" id="industry_'.$val['id'].'" '.$chk.'>
-                            <label class="form-check-label my-1" for="industry_'.$val['id'].'">'.$val['industry'].'</label>
+                            <label class="form-check-label my-1"  for="industry_'.$val['id'].'">'.$val['industry'].'</label>'.$val['id'].'
                           </div>';
                 }
                 ?>
@@ -120,23 +120,17 @@
                 style="text-align: left;">
                 <span id="roleDropdownText">Select Role</span>
             </button>
-            <div class="dropdown-menu w-100 p-3" aria-labelledby="roleDropdown" style="max-height: 300px; overflow-y: auto;">
-                <?php
-                $roles = $this->db->where('status', 1)->order_by('role', 'ASC')->get('job_role')->result();
-                foreach ($roles as $row) {
-                    $chk = (isset($selected_roles) && in_array($row->id, $selected_roles)) ? "checked='checked'" : "";
-                    echo '<div class="form-check ml-2">
-                            <input class="form-check-input role-checkbox" type="checkbox" name="role_id[]" value="'.$row->id.'" id="role_'.$row->id.'" '.$chk.'>
-                            <label class="form-check-label my-1" for="role_'.$row->id.'">'.$row->role.'</label>
-                          </div>';
-                }
-                ?>
+
+            <div class="dropdown-menu w-100 p-3" aria-labelledby="roleDropdown" id="roleDropdownList"
+                style="max-height: 300px; overflow-y: auto;">
+                <!-- Roles will be loaded here via JS -->
             </div>
         </div>
     </div>
 
     <div id="selectedRoles" class="mt-2"></div>
 </div>
+
 
 <div class="form-group mb-4 col-lg-6 col-xs-12 col-sm-12">
     <label class="form-label required">Key Skill's</label>
@@ -208,6 +202,7 @@
     </form>
 </div>
 
+
 <!-- Your existing form and HTML stays exactly the same above -->
 
 <!-- Place this block at the very end of your file -->
@@ -220,31 +215,38 @@
 
 <!-- ✅ Industry & Key Skill Dropdown Functionality -->
 <script>
-$(document).ready(function() {
-    // Update the text in the dropdown button and show badges
-    function updateDropdownText(checkboxClass, displayId, buttonTextId, defaultText) {
-        let selected = [];
-        $(checkboxClass + ':checked').each(function() {
-            selected.push($(this).next('label').text());
-        });
-        $(buttonTextId).text(selected.length > 0 ? selected.length + ' selected' : defaultText);
+    var base_url = "<?= base_url(); ?>";
 
-        let badges = selected.map(item => <span class="badge badge-info mr-1">${item}</span>);
-        $(displayId).html(badges.join(''));
+    $(document).on('change', '.industry-checkbox', function () {
+        let selectedIndustries = $('.industry-checkbox:checked').map(function () {
+            return $(this).val();
+        }).get();
+
+    $.ajax({
+    url: base_url + 'student/get_job_roles_for_industries',
+    type: 'POST',
+    data: { industry_ids: selectedIndustries },
+    dataType: 'json',
+    success: function (response) {
+        if (response.status) {
+            let html = '';
+            response.roles.forEach(role => {
+                html += `<div class="form-check ml-2">
+                            <input class="form-check-input role-checkbox" type="checkbox" name="role_id[]" value="${role.id}" id="role_${role.id}">
+                            <label class="form-check-label my-1" for="role_${role.id}">${role.role}</label>
+                         </div>`;
+            });
+            $('#roleDropdownList').html(html);
+            $('#roleDropdownText').text('Select Role');
+            $('#selectedRoles').html('');
+        } else {
+            $('#roleDropdownList').html('<span class="text-danger">No roles found.</span>');
+        }
+    },
+    error: function () {
+        alert('Failed to load roles. Check server or controller.');
     }
-
-    // Events
-    $(document).on('change', '.industry-checkbox', function() {
-        updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText',
-            'Select Industry');
-    });
-
-    // If you later convert Key Skills to dropdown, reuse this:
-    // $(document).on('change', '.skill-checkbox', function () {
-    //     updateDropdownText('.skill-checkbox', '#selectedKeySkills', '#keySkillsDropdownText', 'Select Key Skills');
-    // });
-
-    // Initialize on page load
-    updateDropdownText('.industry-checkbox', '#selectedIndustries', '#industryDropdownText', 'Select Industry');
 });
+
+    });
 </script>

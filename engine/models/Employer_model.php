@@ -61,5 +61,24 @@ class Employer_model extends MY_Model
         ->get()->result_array();
     }
 
+    public function get_job_roles_by_industries($industry_ids = []) {
+        if (!empty($industry_ids)) {
+            $this->db->where_in('ijr.industry_id', $industry_ids);
+        }
+    
+        $this->db->select('ijr.id, ijr.industry_id, jr.id as job_role_id, jr.role')
+                 ->from('isdm_industry_job_role as ijr')
+                 ->join('job_role as jr', 'ijr.job_role_id = jr.id', 'left')
+                 ->where('ijr.status', 1)
+                 ->order_by('jr.role', 'ASC');
+    
+        return $this->db->get()->result_array();
+    }
+    
+    
+    
+    
+    
+
 }
 ?>

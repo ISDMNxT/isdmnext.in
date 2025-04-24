@@ -1326,5 +1326,23 @@ class Website extends Ajax_Controller
             $this->response('status', false);
         }
     }
+
+    function get_job_roles_for_industries() {
+        $industry_ids = $this->input->post('industry_ids');
+        $this->load->model('Employer_model');
+        $roles = $this->Employer_model->get_job_roles_by_industries($industry_ids);
+    
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => true,
+            'ids_received' => $industry_ids,
+            'roles_count' => count($roles),
+            'roles' => $roles
+        ]);
+    }
+    
+    
+    
+    
 }
 ?>

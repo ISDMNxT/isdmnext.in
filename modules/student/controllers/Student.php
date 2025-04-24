@@ -355,5 +355,17 @@ class Student extends MY_Controller
     function apply_jobs(){
         $this->student_view('apply_jobs');
     }
+
+    public function get_job_roles_for_industries() {
+        $industry_ids = $this->input->post('industry_ids');
+        $this->load->model('Employer_model');
+        $roles = $this->Employer_model->get_job_roles_by_industries($industry_ids);
+    
+        echo json_encode([
+            'status' => true,
+            'roles' => $roles
+        ]);
+    }
+    
 }
 ?>
