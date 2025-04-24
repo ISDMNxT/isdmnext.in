@@ -98,7 +98,7 @@
                     $chk = (!empty($selected_industries) && in_array($val['id'], $selected_industries)) ? "checked='checked'" : "";
                     echo '<div class="form-check ml-2">
                             <input class="form-check-input industry-checkbox "  type="checkbox" name="industries[]" value="'.$val['id'].'" id="industry_'.$val['id'].'" '.$chk.'>
-                            <label class="form-check-label my-1"  for="industry_'.$val['id'].'">'.$val['industry'].'</label>'.$val['id'].'
+                            <label class="form-check-label my-1"  for="industry_'.$val['id'].'">'.$val['industry'].'</label>
                           </div>';
                 }
                 ?>
