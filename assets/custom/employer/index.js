@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 e.preventDefault();
                 var quesData = ($(this).closest('tr').data('param'));
                 SwalWarning('Confirmation!',
-                        `Are you sure you want to send Interview Request to <b class="text-success">${quesData.student_name}</b>.`, true, 'Ok, Delete It.').then((e) => {
+                        `Are you sure you want to send Interview Request to <b class="text-success">${quesData.student_name}</b>.`, true, 'Ok, Send It.').then((e) => {
                             if (e.isConfirmed) {
                                 $.AryaAjax({
                                     url: 'employer/send_interview_request',

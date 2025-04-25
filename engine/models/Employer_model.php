@@ -78,17 +78,18 @@ class Employer_model extends MY_Model
     public function get_skills_by_roles($role_ids = []) {
         if (!empty($role_ids)) {
             $this->db->select('js.id, js.skill')
-                     ->from('job_role_skill as jrs')
+                     ->from('isdm_job_role_skill as jrs')
                      ->join('job_skill as js', 'js.id = jrs.skill_id')
                      ->where_in('jrs.role_id', $role_ids)
                      ->where('js.status', 1)
                      ->group_by('js.id')
                      ->order_by('js.skill', 'ASC');
-    
             return $this->db->get()->result_array();
         }
         return [];
     }
+    
+    
     
     
     

@@ -1340,6 +1340,14 @@ class Website extends Ajax_Controller
             'roles' => $roles
         ]);
     }
+
+    public function get_skills_for_roles() {
+        $role_ids = $this->input->post('role_ids');
+        $this->load->model('Employer_model');
+        $skills = $this->Employer_model->get_skills_by_roles($role_ids);
+    
+        echo json_encode(['status' => true, 'skills' => $skills]);
+    }
     
     
     

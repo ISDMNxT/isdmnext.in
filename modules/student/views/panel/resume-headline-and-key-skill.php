@@ -206,45 +206,55 @@
 
 <!-- ✅ Industry & Key Skill Dropdown Functionality -->
 <script>
-    var base_url = "<?= base_url(); ?>";
+var base_url = "http://localhost/isdmnext.in/"; // or use '<?= base_url(); ?>' if PHP is rendering properly
 
-    $(document).on('change', '.industry-checkbox', function () {
-        let selectedIndustries = $('.industry-checkbox:checked').map(function () {
-            return $(this).val();
-        }).get();
+// ✅ INDUSTRY → ROLE
+$(document).on('change', '.industry-checkbox', function () {
+    let selectedIndustries = $('.industry-checkbox:checked').map(function () {
+        return $(this).val();
+    }).get();
 
     $.ajax({
-    url: base_url + 'student/get_job_roles_for_industries',
-    type: 'POST',
-    data: { industry_ids: selectedIndustries },
-    dataType: 'json',
-    success: function (response) {
-        if (response.status) {
-            let html = '';
-            response.roles.forEach(role => {
-                html += `<div class="form-check ml-2">
-                            <input class="form-check-input role-checkbox" type="checkbox" name="role_id[]" value="${role.id}" id="role_${role.id}">
-                            <label class="form-check-label my-1" for="role_${role.id}">${role.role}</label>
-                         </div>`;
-            });
-            $('#roleDropdownList').html(html);
-            $('#roleDropdownText').text('Select Role');
-            $('#selectedRoles').html('');
-        } else {
-            $('#roleDropdownList').html('<span class="text-danger">No roles found.</span>');
+        url: base_url + 'student/get_job_roles_for_industries',
+        type: 'POST',
+        data: { industry_ids: selectedIndustries },
+        dataType: 'json',
+        success: function (response) {
+            if (response.status) {
+                let html = '';
+                response.roles.forEach(role => {
+                    html += `<div class="form-check ml-2">
+                                <input class="form-check-input role-checkbox" type="checkbox" name="role_id[]" value="${role.job_role_id}" id="role_${role.job_role_id}">
+                                <label class="form-check-label my-1" for="role_${role.job_role_id}">${role.role}</label>
+                             </div>`;
+                });
+                $('#roleDropdownList').html(html);
+                $('#roleDropdownText').text('Select Role');
+                $('#selectedRoles').html('');
+            } else {
+                $('#roleDropdownList').html('<span class="text-danger">No roles found.</span>');
+            }
+        },
+        error: function () {
+            alert('Failed to load roles. Check server or controller.');
         }
-    },
-    error: function () {
-        alert('Failed to load roles. Check server or controller.');
-    }
+    });
 });
 
-    });
-
-    $(document).on('change', '.role-checkbox', function () {
+// ✅ ROLE → SKILLS
+$(document).on('change', '.role-checkbox', function () {
     let selectedRoles = $('.role-checkbox:checked').map(function () {
         return $(this).val();
     }).get();
+
+    console.log("Selected Roles:", selectedRoles); // ✅ Debug
+
+    if (selectedRoles.length === 0) {
+        $('#selectedKeySkills').html('');
+        $('#keySkillsDropdownText').text('Select Key Skills');
+        $('.dropdown-menu[aria-labelledby="keySkillsDropdown"]').html('<p class="text-muted px-2">Please select a role first.</p>');
+        return;
+    }
 
     $.ajax({
         url: base_url + 'student/get_skills_for_roles',
@@ -252,6 +262,7 @@
         data: { role_ids: selectedRoles },
         dataType: 'json',
         success: function (response) {
+            console.log("Skills Response:", response); // ✅ Debug
             if (response.status) {
                 let html = '';
                 response.skills.forEach(skill => {
@@ -260,15 +271,15 @@
                                 <label class="form-check-label my-1" for="skill_${skill.id}">${skill.skill}</label>
                              </div>`;
                 });
+                $('.dropdown-menu[aria-labelledby="keySkillsDropdown"]').html(html);
                 $('#keySkillsDropdownText').text('Select Key Skills');
                 $('#selectedKeySkills').html('');
-                $('.dropdown-menu[aria-labelledby="keySkillsDropdown"]').html(html);
             }
         },
-        error: function () {
-            alert('Failed to load skills. Check server.');
+        error: function (xhr) {
+            console.error("❌ AJAX Error:", xhr.responseText);
+            alert('Failed to load skills. Try again.');
         }
     });
 });
-
 </script>
