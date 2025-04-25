@@ -442,10 +442,11 @@ $(document).ready(function () {
     function updateDropdownText(checkboxClass, displayId, buttonTextId, defaultText) {
         let selected = [];
         $(checkboxClass + ':checked').each(function () {
-            selected.push($(this).next('label').text());
+            let labelText = $('label[for="' + $(this).attr('id') + '"]').text();
+            selected.push(labelText);
         });
         $(buttonTextId).text(selected.length > 0 ? selected.length + ' selected' : defaultText);
-
+    
         let badges = selected.map(item => `<span class="badge badge-info mr-1">${item}</span>`);
         $(displayId).html(badges.join(''));
     }
