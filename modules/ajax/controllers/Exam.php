@@ -506,17 +506,21 @@ class Exam extends Ajax_Controller
             $data['isDeleted']          = 0;
             $this->db->insert('exams_master',$data);
             $center_id = $this->post('center_id');
-            //$center = $this->db->select('email')->from('centers')->where('id', $center_id)->get()->row();
-            $this->email->from('isdmnxt@gmail.com', 'ISDM Exam System');
-            $this->email->to('dikshant@isdmindia.in');
+            $center = $this->db->select('email')->from('centers')->where('id', $center_id)->get()->row();
+            //email start here
+            $this->load->library('email');
+
+            $this->email->from('isdmnxt@gmail.com', 'ISDM Team');
+            $this->email->to($center->email);
             $this->email->subject('New Exam Request Submitted');
             $this->email->message('Dear Center, <br>A new exam request has been submitted. Please log in and review the details. <br><br>Regards,<br>ISDM Team');
-
+        
             if ($this->email->send()) {
-                log_message('info', 'Email sent to center: ' . $center_email);
-            } else {
-                log_message('error', 'Email sending failed: ' . $this->email->print_debugger());
+                $this->response('status',true);
+                exit; // ✅ Very important to stop further output
             }
+            //email end here
+
         }
         
         $this->response('status',true);

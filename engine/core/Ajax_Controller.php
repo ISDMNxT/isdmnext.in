@@ -7,6 +7,7 @@ class Ajax_Controller extends MY_Controller
     function __construct()
     {
         parent::__construct();
+        
         if (
                 !$this->center_model->isLogin() and 
                 $this->router->fetch_method() != 'admin_login' and 

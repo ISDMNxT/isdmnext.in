@@ -202,20 +202,20 @@ document.addEventListener('DOMContentLoaded',function(e){
             });
         }
 
-    form.addEventListener('submit',function(e){
-        e.preventDefault();
-        $.AryaAjax({
-            url  : 'exam/submit-request',
-            data : new FormData(form),
-            validation : validation,
-            success_message : 'Requestion Submitted Successfully.',
-            page_reload : false
-        }).then( (e) => {
-            toastr.success(`Requestion Submitted Successfully.`);
-            location.href = `${base_url}exam/request`;
-            //log(e);
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            $.AryaAjax({
+                url  : 'exam/submit-request',
+                data : new FormData(form),
+                validation : validation,
+                success_message : 'Request Submitted Successfully.',
+                page_reload : false
+            }).then(() => {
+                    toastr.success('Request Submitted Successfully.');
+                    location.href = `${base_url}exam/request`;
+            });
         });
-    });
+        
 
     institue_box.change(function () {
         var center_id = $(this).val();
