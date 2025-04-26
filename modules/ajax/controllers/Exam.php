@@ -507,20 +507,21 @@ class Exam extends Ajax_Controller
             $this->db->insert('exams_master',$data);
             $center_id = $this->post('center_id');
             $center = $this->db->select('email')->from('centers')->where('id', $center_id)->get()->row();
-            //email start here
-            $this->load->library('email');
 
-            $this->email->from('isdmnxt@gmail.com', 'ISDM Team');
-            $this->email->to($center->email);
-            $this->email->subject('New Exam Request Submitted');
-            $this->email->message('Dear Center, <br>A new exam request has been submitted. Please log in and review the details. <br><br>Regards,<br>ISDM Team');
-        
-            if ($this->email->send()) {
-                $this->response('status',true);
-                exit; // ✅ Very important to stop further output
-            }
-            //email end here
+            // Admin Email (static or fetched from database if you prefer)
+            $admin_email = 'keyurpatel3063@gmail.com'; // <-- Replace with actual Admin email
 
+            // Prepare Emails
+            $center_message = 'Dear Center, <br>A new exam request has been submitted. Please log in and review the details. <br><br>Regards,<br>ISDM Team';
+            $admin_message = 'Dear Admin, <br>A new exam request has been submitted by Center ID: '.$center_id.'. Please check the admin panel. <br><br>Regards,<br>ISDM Team';
+
+            // Send Emails
+            $this->send_email($center->email, 'New Exam Request Submitted', $center_message);
+            $this->send_email($admin_email, 'New Exam Request Notification - Admin', $admin_message);
+
+            // Final Response
+           
+            exit;
         }
         
         $this->response('status',true);
@@ -633,4 +634,18 @@ class Exam extends Ajax_Controller
             $this->response("status",true);
         }
     }    
+
+    private function send_email($to, $subject, $message) {
+        $this->load->library('email');
+    
+        $this->email->from('isdmnxt@gmail.com', 'ISDM Team');
+        $this->email->to($to);
+        $this->email->subject($subject);
+        $this->email->message($message);
+    
+        $sent = $this->email->send();
+        $this->email->clear(); // clear settings for next email
+        return $sent;
+    }
+    
 }
