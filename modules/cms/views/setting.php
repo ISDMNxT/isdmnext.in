@@ -67,12 +67,12 @@
                     </div>
                     <div class="form-group mb-4">
                         <label for="number" class="form-label required">Enter Mobile</label>
-                        <input value="<?= $this->SiteModel->get_setting('number') ?>" type="text" required name="number"
+                        <input value="<?= $this->SiteModel->get_setting('number') ?>" type="number" required name="number"
                             id="number" placeholder="Enter Mobile" class="form-control">
                     </div>
                     <div class="form-group mb-4">
                         <label for="wnumber" class="form-label required">Enter Whatsapp No.</label>
-                        <input value="<?= $this->SiteModel->get_setting('whatsapp_number') ?>" type="text" required
+                        <input value="<?= $this->SiteModel->get_setting('whatsapp_number') ?>" type="number" required
                             name="whatsapp_number" id="wnumber" placeholder="Enter Whatsapp Number"
                             class="form-control">
                     </div>

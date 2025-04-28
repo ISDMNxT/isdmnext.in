@@ -506,14 +506,15 @@ class Exam extends Ajax_Controller
             $data['isDeleted']          = 0;
             $this->db->insert('exams_master',$data);
             $center_id = $this->post('center_id');
-            $center = $this->db->select('email')->from('centers')->where('id', $center_id)->get()->row();
+            $center = $this->db->select('email, institute_name')->from('centers')->where('id', $center_id)->get()->row();
+            //$institute_name = $this->db->select('institute_name')->from('centers')->where('id', $center_id)->get()->row();
 
             // Admin Email (static or fetched from database if you prefer)
             $admin_email = 'keyurpatel3063@gmail.com'; // <-- Replace with actual Admin email
 
             // Prepare Emails
             $center_message = 'Dear Center, <br>A new exam request has been submitted. Please log in and review the details. <br><br>Regards,<br>ISDM Team';
-            $admin_message = 'Dear Admin, <br>A new exam request has been submitted by Center ID: '.$center_id.'. Please check the admin panel. <br><br>Regards,<br>ISDM Team';
+            $admin_message = 'Dear Admin, <br>A new exam request has been submitted by Center Name: '.$center->institute_name.'. Please check the admin panel. <br><br>Regards,<br>ISDM Team';
 
             // Send Emails
             $this->send_email($center->email, 'New Exam Request Submitted', $center_message);

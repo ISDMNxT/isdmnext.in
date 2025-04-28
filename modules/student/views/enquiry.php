@@ -97,7 +97,7 @@ foreach ($list as $row) {
                             <div class="form-group mb-4 col-lg-6 col-xs-12 col-sm-12">
                                 <label class="form-label required">Whatsapp Number</label>
                                 <div class="input-group">
-                                    <input type="text" name="contact_number" class="form-control"
+                                    <input type="number" name="contact_number" class="form-control"
                                         placeholder="Whatsapp Number" autocomplete="off">
                                     <span class="input-group-text" id="basic-addon2"
                                         style="width:100px;padding:0px!important">
@@ -114,7 +114,7 @@ foreach ($list as $row) {
                             <div class="form-group mb-4 col-lg-6 col-xs-12 col-sm-12">
                                 <label class="form-label">Alternative Mobile</label>
                                 <div class="input-group">
-                                    <input type="text" name="alternative_mobile" class="form-control"
+                                    <input type="number" name="alternative_mobile" class="form-control"
                                         placeholder="Mobile" autocomplete="off">
                                     <span class="input-group-text" id="basic-addon2"
                                         style="width:100px;padding:0px!important">
@@ -158,7 +158,7 @@ foreach ($list as $row) {
 
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Pincode</label>
-                                <input class="form-control" name="pincode" placeholder="Enter Pincode">
+                                <input type="number" class="form-control" name="pincode" placeholder="Enter Pincode">
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Select State </label>
