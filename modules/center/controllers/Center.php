@@ -1,10 +1,16 @@
 <?php
 class Center extends MY_Controller
 {
+    // function add()
+    // {
+    //     $this->view('add');
+    // }
+
     function add()
     {
         $this->view('add');
     }
+
     function list()
     {
         $this->ki_theme->set_title('List Center(s)', true);
@@ -271,4 +277,5 @@ class Center extends MY_Controller
         $this->set_data('data',$data);
         $this->view('trainer_view_report');
     }
+    
 }
