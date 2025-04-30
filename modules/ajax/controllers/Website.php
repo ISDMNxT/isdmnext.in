@@ -274,31 +274,182 @@ class Website extends Ajax_Controller
         );
 
     }
-    function add_center()
-    {
-        if ($this->validation('add_center')) {
-            $data = $this->post();
-            $data['status'] = 0;
-            $data['added_by'] = 'admin';
-            $data['type'] = 'center';
-            $email = $data['email_id'];
-            unset($data['email_id']);
-            $data['email'] = $email;
-            $data['password'] = sha1($data['password']);
-            ///upload docs
-            $data['adhar'] = $this->file_up('adhar');
-            // $data['adhar_back'] = $this->file_up('adhar_back');
-            $data['image'] = $this->file_up('image');
-            $data['agreement'] = $this->file_up('agreement');
-            $data['address_proof'] = $this->file_up('address_proof');
-            $data['signature'] = $this->file_up('signature');
-            if (CHECK_PERMISSION('CENTRE_LOGO'))
-                $data['logo'] = $this->file_up('logo');
-            $data['isPending'] = 1;
-            $this->db->insert('centers', $data);
-            $this->response('status', true);
+    // function add_center()
+    // {
+    //     if ($this->validation('add_center')) {
+    //         $data = $this->post();
+    //         $data['status'] = 0;
+    //         $data['added_by'] = 'admin';
+    //         $data['type'] = 'center';
+    //         $email = $data['email_id'];
+    //         unset($data['email_id']);
+    //         $data['email'] = $email;
+    //         $data['password'] = sha1($data['password']);
+    //         ///upload docs
+    //         $data['adhar'] = $this->file_up('adhar');
+    //         // $data['adhar_back'] = $this->file_up('adhar_back');
+    //         $data['image'] = $this->file_up('image');
+    //         $data['agreement'] = $this->file_up('agreement');
+    //         $data['address_proof'] = $this->file_up('address_proof');
+    //         $data['signature'] = $this->file_up('signature');
+    //         if (CHECK_PERMISSION('CENTRE_LOGO'))
+    //             $data['logo'] = $this->file_up('logo');
+    //         $data['isPending'] = 1;
+    //         $this->db->insert('centers', $data);
+    //         $this->response('status', true);
+    //     }
+    // }
+
+    public function add_center()
+{
+    if ($this->form_validation->run('add_center')) {
+        $data = $this->post();
+
+        $data['status'] = 1;
+        $data['added_by'] = 'admin';
+        $data['type'] = 'center';
+
+        $email = $data['email_id'];
+        unset($data['email_id']);
+        $data['email'] = $email;
+
+        $plainPassword = $data['password']; // Store plain password for email
+        $data['password'] = sha1($plainPassword); // Save hashed password in database
+
+        // Upload documents
+        $data['adhar'] = $this->file_up('adhar');
+        $data['image'] = $this->file_up('image');
+        $data['agreement'] = $this->file_up('agreement');
+        $data['address_proof'] = $this->file_up('address_proof');
+        $data['signature'] = $this->file_up('signature');
+        if (CHECK_PERMISSION('CENTRE_LOGO')) {
+            $data['logo'] = $this->file_up('logo');
         }
+
+        // Insert into database
+        $this->db->insert('centers', $data);
+
+        // ✅ Send Admin and Center Emails
+        $this->send_center_emails($data, $plainPassword);
+
+        // ✅ Send success response
+        $this->response('status', true);
+
+    } else {
+        // ❌ Validation failed, send errors
+        $this->response('html', $this->errors());
     }
+}
+
+
+private function send_center_emails($data, $plainPassword)
+{
+    $admin_email = 'keyurpatel3063@gmail.com';
+    $center_email = $data['email'];
+
+    $admin_subject = 'New Franchise Registration Notification – ISDM NxT';
+    $center_subject = 'Congratulations! Your Franchise Registration with ISDM NxT is Successful';
+
+    $admin_message = $this->compose_admin_email($data);
+    $center_message = $this->compose_center_email($data, $plainPassword);
+
+    $this->send_email($admin_email, $admin_subject, $admin_message);
+    $this->send_email($center_email, $center_subject, $center_message);
+}
+
+
+private function compose_admin_email($data)
+{
+    $logo_url = base_url('upload/5a83cc0489_2.png');
+
+    $location = $this->db->select('STATE_NAME')->from('state')->where('STATE_ID', $data['state_id'])->get()->row()->STATE_NAME ?? 'N/A';
+    $registration_date = date('d-m-Y');
+
+    return '
+    <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="'. $logo_url.' " alt="ISDM NxT Logo" style="height: 60px;" />
+          <h2 style="color: #004aad;">New Franchise Registration Notification – ISDM NxT</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
+          <p>Hello <strong>ISDM NxT Admin</strong>,</p>
+          <p>A new client has successfully registered as a franchise with ISDM NxT.</p>
+          <h3 style="color: #004aad;">📋 Registration Details:</h3>
+          <table style="width: 100%; margin-top: 10px;">
+            <tr><td><strong>Institute Name:</strong></td><td>' . $data['institute_name'] . '</td></tr>
+            <tr><td><strong>Client Name:</strong></td><td>' . $data['name'] . '</td></tr>
+            <tr><td><strong>Mobile Number:</strong></td><td>' . $data['contact_number'] . '</td></tr>
+            <tr><td><strong>Email Address:</strong></td><td>' . $data['email'] . '</td></tr>
+            <tr><td><strong>Location:</strong></td><td>' . $location . '</td></tr>
+            <tr><td><strong>Registration Date:</strong></td><td>' . $registration_date . '</td></tr>
+          </table>
+          <br>
+          <p>Kindly review their details and initiate the next steps if required.</p>
+          <p>➡️ <a href="https://www.isdmnxt.in" style="color: #007bff;">Access the Admin Portal</a></p>
+          <p style="margin-top: 20px;"><strong>Contact Support:</strong><br>
+          ✉️ info@isdmnext.in<br>
+          📞 8320181598 / 8320876233</p>
+          <p>Thank you for keeping ISDM NxT’s franchise operations strong and successfull!</p>
+          <br>
+          <p>Best regards,<br><strong>ISDM NxT – Admin Portal</strong><br>
+          <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></p>
+        </td>
+      </tr>
+    </table>';
+}
+
+private function compose_center_email($data, $plain_password)
+{
+    return '
+    <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="upload\5a83cc0489_2.png" alt="ISDM NxT Logo" style="height: 60px;" />
+          <h2 style="color: #004aad;">🎉 Congratulations! Franchise Registration Successfull</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
+          <p>Hello <strong>' . $data['name'] . '</strong>,</p>
+          <p>Greetings from ISDM NxT!</p>
+          <p>We are thrilled to inform you that your Franchise Registration has been successfully completed.</p>
+          <p>Welcome to ISDM NxT\'s growing network of Premier Computer Institutes!</p>
+          <h3 style="color: #004aad;">🔐 Your Login Credentials:</h3>
+          <ul>
+            <li><strong>Website:</strong> <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></li>
+            <li><strong>Username:</strong> ' . $data['email'] . '</li>
+            <li><strong>Password:</strong> ' . $plain_password . '</li>
+          </ul>
+          <p>You can now manage your institute\'s profile, admissions, and course activities using your login.</p>
+          <p style="margin-top: 20px;"><strong>Need Help?</strong><br>
+          ✉️ info@isdmnext.in<br>
+          📞 8320181598 / 8320876233</p>
+          <p>We look forward to a strong and successful journey together!</p>
+          <br>
+          <p>Best regards,<br><strong>Team ISDM NxT</strong><br>
+          <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></p>
+        </td>
+      </tr>
+    </table>';
+}
+
+private function send_email($to, $subject, $message)
+{
+    $this->load->library('email');
+
+    $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    $this->email->to($to);
+    $this->email->subject($subject);
+    $this->email->message($message);
+
+    $sent = $this->email->send();
+    $this->email->clear(); // Clear config for next use
+
+    return $sent;
+}
 
     function update_stuednt_basic_details()
     {

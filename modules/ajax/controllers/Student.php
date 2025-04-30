@@ -210,6 +210,13 @@ class Student extends Ajax_Controller
         if ($this->form_validation->run()) {
             $this->db->insert('students', $data);
             $student_id = $this->db->insert_id();
+            $this->send_student_welcome_email([
+                'name' => $data['name'],
+                'dob' => $data['dob'],
+                'roll_no' => $data['roll_no'],
+                'email' => $data['email']
+            ]);
+            
             if ($walletSystem && $this->center_model->isCenter()) {
                 $data = [
                     'center_id' => $this->center_model->loginId(),
@@ -1101,4 +1108,123 @@ class Student extends Ajax_Controller
         $get = $this->student_model->feestatus($_GET['status']);
         $this->response('data', $get->result_array());
     }
+
+//     private function send_student_welcome_email($student_data, $plain_password)
+// {
+//     $this->load->library('email');
+
+//     $this->email->initialize([
+//         'protocol' => 'smtp',
+//         'smtp_host' => 'ssl://smtp.gmail.com',
+//         'smtp_port' => 465,
+//         'smtp_user' => 'isdmnxt@gmail.com',
+//         'smtp_pass' => 'zpeh ivui sqdt fvkz',
+//         'mailtype'  => 'html',
+//         'charset'   => 'utf-8',
+//         'newline'   => "\r\n"
+//     ]);
+
+//     $subject = 'Welcome to ISDM NxT – Your Student Portal Access is Ready!';
+//     $message = '
+//     <table style="width:100%; font-family:Arial, sans-serif; background-color:#f9f9f9; padding:20px;">
+//         <tr>
+//             <td style="text-align:center;">
+//                 <img src="https://isdmnxt.in/upload/5a83cc0489_2.png" style="height:60px;" alt="ISDM NxT Logo" />
+//                 <h2 style="color:#004aad;">🎉 Welcome to ISDM NxT! 🎉</h2>
+//             </td>
+//         </tr>
+//         <tr>
+//             <td style="background-color:#ffffff; padding:20px; border-radius:6px;">
+//                 <p>Dear <strong>' . $student_data['name'] . '</strong>,</p>
+//                 <p>We are excited to inform you that your registration is now complete. You are officially part of the ISDM NxT Innovative Learning Network! 🚀</p>
+                
+//                 <h3>🔑 Your Login Details:</h3>
+//                 <ul>
+//                     <li><strong>Website:</strong> <a href="https://isdmnext.in/student-login">https://isdmnxt.in/student-login</a></li>
+//                     <li><strong>Username:</strong> ' . $student_data['roll_no'] . '</li>
+//                     <li><strong>Password:</strong> ' . $plain_password . '</li>
+//                 </ul>
+
+//                 <h3>🌟 Features Available:</h3>
+//                 <ul>
+//                     <li>📚 Study Materials – Access anytime</li>
+//                     <li>📅 Attendance Reports</li>
+//                     <li>🎓 Certificates & Marksheet Download</li>
+//                     <li>📝 Online Exams & Admit Cards</li>
+//                     <li>🏫 Innovative School & Online Courses</li>
+//                 </ul>
+
+//                 <p>📞 For any support:</p>
+//                 <p>Email: info@isdmnext.in<br>Phone: 8320181598 / 8320876233</p>
+
+//                 <p>Best regards,<br><strong>Team ISDM NxT</strong><br><a href="https://isdmnxt.in">www.isdmnxt.in</a></p>
+//             </td>
+//         </tr>
+//     </table>';
+
+//     $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+//     $this->email->to($student_data['email']);
+//     $this->email->subject($subject);
+//     $this->email->message($message);
+
+//     return $this->email->send();
+// }
+
+private function send_student_welcome_email($student)
+{
+    $this->load->library('email');
+
+    $name = $student['name'];
+    $dob = $student['dob'];
+    $roll_no = $student['roll_no'];
+    $email = $student['email'];
+
+    // Generate password from name and DOB
+    $initials = strtoupper(substr(preg_replace("/[^a-zA-Z]/", '', $name), 0, 2));
+    $dobYear = date('Y', strtotime(str_replace('/', '-', $dob)));
+    $defaultPassword = "{$initials}{$dobYear}";
+
+    $subject = "Welcome to ISDM NxT – Your Student Portal Access is Ready!";
+    $message = "
+    <table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'>
+        <tr><td>
+            <h2>🎉 Congratulations and Welcome to ISDM NxT! 🎉</h2>
+            <p>Dear <strong>{$name}</strong>,</p>
+            <p>You are officially part of the <strong>ISDM NxT Innovative Learning Network</strong>! 🚀</p>
+
+            <h3>🔑 Your Login Details:</h3>
+            <ul>
+                <li><strong>Website:</strong> <a href='https://isdmnext.in/student-login-'>https://isdmnext.in/student-login-</a></li>
+                <li><strong>Username:</strong> {$roll_no}</li>
+                <li><strong>Password:</strong> {$defaultPassword}</li>
+            </ul>
+
+            <h3>🌟 Explore Powerful Features:</h3>
+            <ul>
+                <li>📚 Study Materials</li>
+                <li>📅 Attendance Tracking</li>
+                <li>🎓 Certification and Marksheet</li>
+                <li>📝 Online Exams</li>
+                <li>🏫 Innovative Schooling</li>
+                <li>🌐 Online Courses</li>
+                <li>🎟️ Admit Cards</li>
+                <li>💡 And much more!</li>
+            </ul>
+
+            <p>📞 Need Help?<br>
+            ✉️ info@isdmnext.in<br>
+            📞 8320181598 / 8320876233</p>
+
+            <p>Warm regards,<br><strong>Team ISDM NxT</strong><br>
+            🌐 <a href='https://isdmnext.in/'>https://isdmnext.in/</a></p>
+        </td></tr>
+    </table>";
+
+    $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    $this->email->to($email);
+    $this->email->subject($subject);
+    $this->email->message($message);
+    $this->email->send();
+}
+
 }

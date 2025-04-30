@@ -51,6 +51,23 @@ class Center extends Ajax_Controller
 }
 
 
+// private function send_center_emails($data, $plainPassword)
+// {
+//     $admin_email = 'keyurpatel3063@gmail.com';
+//     $center_email = $data['email'];
+
+//     $admin_subject = 'New Franchise Registration Notification – ISDM NxT';
+//     $center_subject = 'Congratulations! Your Franchise Registration with ISDM NxT is Successful';
+
+//     $admin_message = $this->compose_admin_email($data);
+//     $center_message = $this->compose_center_email($data, $plainPassword);
+
+//     $this->send_email($admin_email, $admin_subject, $admin_message);
+//     $this->send_email($center_email, $center_subject, $center_message);
+//     $this->send_email($center_email, $profile_subject, $profile_message); // ✅ third email
+
+// }
+
 private function send_center_emails($data, $plainPassword)
 {
     $admin_email = 'keyurpatel3063@gmail.com';
@@ -58,13 +75,18 @@ private function send_center_emails($data, $plainPassword)
 
     $admin_subject = 'New Franchise Registration Notification – ISDM NxT';
     $center_subject = 'Congratulations! Your Franchise Registration with ISDM NxT is Successful';
+    $profile_subject = 'Action Required: Complete Your Franchise Profile – ISDM NxT'; // ✅ define here
 
     $admin_message = $this->compose_admin_email($data);
     $center_message = $this->compose_center_email($data, $plainPassword);
+    $profile_message = $this->compose_profile_completion_email($data);
 
+    // Send all 3 emails
     $this->send_email($admin_email, $admin_subject, $admin_message);
     $this->send_email($center_email, $center_subject, $center_message);
+    $this->send_email($center_email, $profile_subject, $profile_message); // ✅ now safe to use
 }
+
 
 
 private function compose_admin_email($data)
@@ -101,7 +123,7 @@ private function compose_admin_email($data)
           <p style="margin-top: 20px;"><strong>Contact Support:</strong><br>
           ✉️ info@isdmnext.in<br>
           📞 8320181598 / 8320876233</p>
-          <p>Thank you for keeping ISDM NxT’s franchise operations strong and successful!</p>
+          <p>Thank you for keeping ISDM NxT’s franchise operations strong and successfull!</p>
           <br>
           <p>Best regards,<br><strong>ISDM NxT – Admin Portal</strong><br>
           <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></p>
@@ -117,7 +139,7 @@ private function compose_center_email($data, $plain_password)
       <tr>
         <td style="text-align: center;">
           <img src="upload\5a83cc0489_2.png" alt="ISDM NxT Logo" style="height: 60px;" />
-          <h2 style="color: #004aad;">🎉 Congratulations! Franchise Registration Successful</h2>
+          <h2 style="color: #004aad;">🎉 Congratulations! Franchise Registration Successfull</h2>
         </td>
       </tr>
       <tr>
@@ -125,7 +147,7 @@ private function compose_center_email($data, $plain_password)
           <p>Hello <strong>' . $data['name'] . '</strong>,</p>
           <p>Greetings from ISDM NxT!</p>
           <p>We are thrilled to inform you that your Franchise Registration has been successfully completed.</p>
-          <p>Welcome to ISDM NxT\'s growing network of premier Computer Institutes!</p>
+          <p>Welcome to ISDM NxT\'s growing network of Premier Computer Institutes!</p>
           <h3 style="color: #004aad;">🔐 Your Login Credentials:</h3>
           <ul>
             <li><strong>Website:</strong> <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></li>
@@ -139,6 +161,62 @@ private function compose_center_email($data, $plain_password)
           <p>We look forward to a strong and successful journey together!</p>
           <br>
           <p>Best regards,<br><strong>Team ISDM NxT</strong><br>
+          <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></p>
+        </td>
+      </tr>
+    </table>';
+}
+
+private function compose_profile_completion_email($data)
+{
+    $logo_url = base_url('upload/5a83cc0489_2.png'); // optional, if you want to add logo
+
+    return '
+    <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <tr>
+        <td style="text-align: center;">
+          <img src="' . $logo_url . '" alt="ISDM NxT Logo" style="height: 60px;" />
+          <h2 style="color: #004aad;">Action Required: Complete Your Franchise Profile – ISDM NxT</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
+          <p>Dear <strong>' . $data['institute_name'] . '</strong>,</p>
+          <p>🎉 Welcome to ISDM NxT! 🎉</p>
+          <p>Thank you for registering on our new portal — we’re thrilled to have you as part of the ISDM NxT family! 🚀</p>
+
+          <h3>✅ Verification Update:</h3>
+          <p>Your institute has been successfully verified by the ISDM NxT team. 🙌</p>
+
+          <h3>📝 Next Steps – Complete Your Franchise Profile:</h3>
+          <p>Kindly follow the steps below to complete your registration process:</p>
+
+          <ul>
+            <li>🔑 <strong>Login:</strong> <a href="https://isdmnxt.in/admin">https://isdmnxt.in/admin</a></li>
+            <li>📁 <strong>Access Profile:</strong> Click on "PROFILE" in the menu</li>
+            <li>📝 <strong>Update Required Details:</strong>
+              <ul>
+                <li>📸 Avatar: Upload your profile photo</li>
+                <li>👋 Full Name</li>
+                <li>📧 Email Address</li>
+                <li>📞 Contact Number</li>
+                <li>📍 Address</li>
+                <li>🖋️ Signature</li>
+                <li>📛 Institute Logo</li>
+                <li>📸 Image Gallery</li>
+              </ul>
+            </li>
+          </ul>
+
+          <p>🙏 Your cooperation in completing your profile is highly appreciated!</p>
+
+          <p><strong>📞 Need Help?</strong><br>
+          ✉️ Email: info@isdmnext.in<br>
+          📞 Phone: 8320181598 / 8320876233</p>
+
+          <br>
+          <p>Best regards,<br>
+          <strong>Team ISDM NxT</strong><br>
           <a href="https://www.isdmnxt.in">www.isdmnxt.in</a></p>
         </td>
       </tr>

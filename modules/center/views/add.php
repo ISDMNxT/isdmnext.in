@@ -45,7 +45,7 @@
                             </div>
                             <div class="form-group mb-4 col-lg-4 col-xs-12 col-sm-12">
                                 <label class="form-label required">Aadhar Number</label>
-                                <input type="text" name="aadhar_number" id="aadhar_number" class="form-control"
+                                <input type="number" name="aadhar_number" id="aadhar_number" class="form-control"
                                     placeholder="Enter Aadhar Number">
                             </div>
                             <div class="form-group mb-4 col-lg-12 col-xs-12 col-sm-12">
@@ -60,7 +60,7 @@
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Pincode</label>
-                                <input class="form-control" name="pincode" placeholder="Enter Pincode">
+                                <input type="number" class="form-control" name="pincode" placeholder="Enter Pincode">
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Select State </label>
@@ -107,12 +107,12 @@
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Whatsapp Number</label>
-                                <input type="text" name="whatsapp_number" class="form-control"
+                                <input type="number" name="whatsapp_number" class="form-control"
                                     placeholder="Enter Whatsapp Number">
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Contact Number</label>
-                                <input type="text" name="contact_number" class="form-control"
+                                <input type="number" name="contact_number" class="form-control"
                                     placeholder="Enter Contact Number">
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
