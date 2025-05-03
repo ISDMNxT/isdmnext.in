@@ -185,7 +185,7 @@ foreach ($list as $row) {
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Pincode</label>
-                                <input value="<?php if(!empty($data['student_id'])) { echo $data['pincode']; } ?>" class="form-control" name="pincode" placeholder="Enter Pincode">
+                                <input type="number" value="<?php if(!empty($data['student_id'])) { echo $data['pincode']; } ?>" class="form-control" name="pincode" placeholder="Enter Pincode">
                             </div>
                             <div class="form-group mb-4 col-lg-3 col-xs-12 col-sm-12">
                                 <label class="form-label required">Select State </label>

@@ -832,14 +832,18 @@ class Student_model extends MY_Model
     
     
 
-    function change_request($stdId)
+    function change_request($student_id)
     {
-        $this->db->select('*')->from('student_change')->where('student_id', $stdId);
-        if ($this->isCenter()){
+        $this->db->select('*')
+            ->from('student_change')
+            ->where('student_id', $student_id)
+            ->order_by('id', 'DESC')
+            ->limit(1);
+
+        if ($this->isCenter()) {
             $this->db->where('center_id', $this->loginId());
         }
-        $this->db->order_by('id', 'DESC');
-        $this->db->limit(1);
+
         return $this->db->get();
     }
 

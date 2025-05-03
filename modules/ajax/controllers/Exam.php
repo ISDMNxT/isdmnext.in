@@ -437,47 +437,43 @@ class Exam extends Ajax_Controller
         $this->response('status', true);
     }
 
-    function submit_request(){
-        $data                           = $this->post();
-        $submit_type                    = $data['submit_type'];
-        $isEdit                         = isset ($_POST['exam_id']) ? $_POST['exam_id'] : '';
-        $students                       = isset ($_POST['student_id']) ? $_POST['student_id'] : [];
-        $subjects                       = isset ($_POST['s_id']) ? $_POST['s_id'] : [];
-        $papers                         = isset ($_POST['p_id']) ? $_POST['p_id'] : [];
-        $s_p                            = isset ($_POST['s_p']) ? json_decode($_POST['s_p'],true) : [];
-        unset($data['submit_type']);
-        unset($data['exam_id']);
-        unset($data['s_id']);
-        unset($data['p_id']);
-        unset($data['s_p']);
-        unset($data['cduration_type']);
-        unset($data['cduration']);
-
-        if($isEdit){
-            $data['student_id']         = json_encode($data['student_id']);
-            if($submit_type == 'A'){
-                $data['start_date']         = date('Y-m-d',strtotime($data['start_date']));
-                $data['end_date']           = date('Y-m-d',strtotime($data['end_date']));
-                $data['is_admin_approved']  = 2;
-            } else if($submit_type == 'R'){
-                $data['is_admin_approved']  = 3;
+    public function submit_request() {
+        $data = $this->post();
+        $submit_type = $data['submit_type'];
+        $isEdit = isset($_POST['exam_id']) ? $_POST['exam_id'] : '';
+        $students = isset($_POST['student_id']) ? $_POST['student_id'] : [];
+        $subjects = isset($_POST['s_id']) ? $_POST['s_id'] : [];
+        $papers = isset($_POST['p_id']) ? $_POST['p_id'] : [];
+        $s_p = isset($_POST['s_p']) ? json_decode($_POST['s_p'], true) : [];
+    
+        unset($data['submit_type'], $data['exam_id'], $data['s_id'], $data['p_id'], $data['s_p'], $data['cduration_type'], $data['cduration']);
+    
+        if ($isEdit) {
+            $data['student_id'] = json_encode($data['student_id']);
+            if ($submit_type == 'A') {
+                $data['start_date'] = date('Y-m-d', strtotime($data['start_date']));
+                $data['end_date'] = date('Y-m-d', strtotime($data['end_date']));
+                $data['is_admin_approved'] = 2;
+            } elseif ($submit_type == 'R') {
+                $data['is_admin_approved'] = 3;
             }
-
+    
             $this->db->where('id', $isEdit)->update('exams_master', $data);
-            if($submit_type == 'A'){
-                foreach($students as $key => $stu_id){
-                    foreach($subjects as $index => $sub_id){
-                        $addArray                           = [];
-                        $addArray['student_id']             = $stu_id;
-                        $addArray['subject_id']             = $sub_id;
-                        $addArray['question_paper_id']      = $papers[$index];
-                        $addArray['exam_master_id']         = $isEdit;
-                        $addArray['paper_total_marks']      = $s_p[$sub_id][$papers[$index]];
-                        $addArray['status']                 = 1;
-                        $this->db->insert('exams_master_trans',$addArray);
+    
+            if ($submit_type == 'A') {
+                foreach ($students as $stu_id) {
+                    foreach ($subjects as $index => $sub_id) {
+                        $addArray = [
+                            'student_id' => $stu_id,
+                            'subject_id' => $sub_id,
+                            'question_paper_id' => $papers[$index],
+                            'exam_master_id' => $isEdit,
+                            'paper_total_marks' => $s_p[$sub_id][$papers[$index]],
+                            'status' => 1
+                        ];
+                        $this->db->insert('exams_master_trans', $addArray);
                     }
-
-                    $datan = [];
+    
                     $datan = [
                         'session_id' => $this->post("session_id"),
                         'student_id' => $stu_id,
@@ -485,13 +481,11 @@ class Exam extends Ajax_Controller
                         'duration_type' => $this->post("cduration_type"),
                         'course_id' => $this->post("course_id"),
                         'exam_date' => $data['start_date'],
-                        'enrollment_no' => 'ENR'.date('His').$stu_id
+                        'enrollment_no' => 'ENR' . date('His') . $stu_id
                     ];
-
+    
                     $chk = $this->student_model->admit_card($datan);
-                    if ($chk->num_rows()) {
-                        
-                    } else {
+                    if (!$chk->num_rows()) {
                         $datan['duration'] = $this->post("cduration");
                         $datan['added_by'] = $this->student_model->login_type();
                         $this->db->insert('admit_cards', $datan);
@@ -499,34 +493,72 @@ class Exam extends Ajax_Controller
                 }
             }
         } else {
-            $data['student_id']         = json_encode($data['student_id']);
-            $data['request_time']       = date('Y-m-d H:i:s');
-            $data['status']             = 1;
-            $data['is_admin_approved']  = 1;
-            $data['isDeleted']          = 0;
-            $this->db->insert('exams_master',$data);
+            $data['student_id'] = json_encode($data['student_id']);
+            $data['request_time'] = date('Y-m-d H:i:s');
+            $data['status'] = 1;
+            $data['is_admin_approved'] = 1;
+            $data['isDeleted'] = 0;
+            $this->db->insert('exams_master', $data);
+    
+            // Fetch details
             $center_id = $this->post('center_id');
             $center = $this->db->select('email, institute_name')->from('centers')->where('id', $center_id)->get()->row();
-            //$institute_name = $this->db->select('institute_name')->from('centers')->where('id', $center_id)->get()->row();
-
-            // Admin Email (static or fetched from database if you prefer)
-            $admin_email = 'keyurpatel3063@gmail.com'; // <-- Replace with actual Admin email
-
-            // Prepare Emails
-            $center_message = 'Dear Center, <br>A new exam request has been submitted. Please log in and review the details. <br><br>Regards,<br>ISDM Team';
-            $admin_message = 'Dear Admin, <br>A new exam request has been submitted by Center Name: '.$center->institute_name.'. Please check the admin panel. <br><br>Regards,<br>ISDM Team';
-
-            // Send Emails
-            $this->send_email($center->email, 'New Exam Request Submitted', $center_message);
-            $this->send_email($admin_email, 'New Exam Request Notification - Admin', $admin_message);
-
-            // Final Response
-           
-            exit;
+            $student_id = $students[0];
+            $student = $this->db->select('name, id')->from('students')->where('id', $student_id)->get()->row();
+            $exam_name = $this->db->select('course_name')->from('course')->where('id', $data['course_id'])->get()->row();
+            $request_date = date('d M, Y h:i A', strtotime($data['request_time']));
+            $logo_url = base_url('upload/logo.png');
+    
+            // Build HTML email
+            $admin_message = '
+            <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+                <tr>
+                    <td style="text-align: center;">
+                        <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="120px" />
+                        <h2 style="color: #004aad;">New Student Exam Request – Action Required</h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
+                        <p>Hello <strong>ISDM NxT Admin</strong>,</p>
+                        <p>A new student exam request has been submitted by an institute.</p>
+                        <h3 style="color: #004aad;">📋 Request Details:</h3>
+                        <table style="width: 100%; margin-top: 10px;">
+                            <tr><td><strong>Institute Name:</strong></td><td>' . $center->institute_name . '</td></tr>
+                            <tr><td><strong>Student Name:</strong></td><td>' . $student->name . '</td></tr>
+                            <tr><td><strong>Student ID:</strong></td><td>' . $student->id . '</td></tr>
+                            <tr><td><strong>Requested Exam:</strong></td><td>' . $exam_name->course_name . '</td></tr>
+                            <tr><td><strong>Request Date:</strong></td><td>' . $request_date . '</td></tr>
+                        </table>
+                        <br>
+                        <p>Kindly log in and verify the request:</p>
+                        <p>➡️ <a href="https://isdmnext.in/admin-login" style="color: #007bff;">Access the Admin Portal</a></p>
+                        <p style="margin-top: 20px;"><strong>Contact Support:</strong><br>
+                        ✉️ info@isdmnext.in<br>
+                        📞 8320181598 / 8320876233</p>
+                        <p>Thank you for maintaining the quality of ISDM NxT examinations.</p>
+                        <br>
+                        <p>Best regards,<br><strong>ISDM NxT – Admin Portal</strong><br>
+                        <a href="https://www.isdmenxt.in">www.isdmnext.in</a></p>
+                    </td>
+                </tr>
+            </table>';
+    
+            // Send email
+            $this->load->library('email');
+            $this->email->from('info@isdmnext.in', 'ISDM NxT');
+            $this->email->to('keyurpatel3063@gmail.com'); // or fetch dynamically
+            $this->email->subject('New Student Exam Request Submitted – Action Required');
+            $this->email->set_mailtype("html");
+            $this->email->message($admin_message);
+            $this->email->send();
+    
+            exit; // prevent further processing
         }
-        
-        $this->response('status',true);
+    
+        $this->response('status', true);
     }
+    
 
     function student_exams_list()
     {

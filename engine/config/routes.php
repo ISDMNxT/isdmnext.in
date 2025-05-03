@@ -61,6 +61,7 @@ $route['marksheet/(:any)'] = 'document/marksheet/$1';
 $route['certificate/(:any)'] = 'document/certificate/$1';
 $route['id-card/(:any)'] = 'document/id_card/$1';
 $route['franchise-certificate/(:any)'] = 'document/franchise_certificate/$1';
+$route['student/publish-student'] = 'student/publish_student';
 
 // Catch-all route (for everything else not defined above)
 $route['(:any)'] = 'site/index/$1';

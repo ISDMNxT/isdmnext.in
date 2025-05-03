@@ -89,9 +89,22 @@ document.addEventListener('DOMContentLoaded', function (d) {
         });
         $(document).on('submit', '.save-student-data', function (r) {
             r.preventDefault();
+            const changed_fields = [];
+            $(update_profile).find('input, select, textarea').each(function () {
+                const name = $(this).attr('name');
+                const current_value = $(this).val();
+                const original_value = $(this).attr('data-original');
+                if (name && typeof original_value !== 'undefined' && current_value !== original_value) {
+                    changed_fields.push(name);
+                }
+            });
+            const formData = new FormData(this);
+            formData.append('fields_updated', JSON.stringify(changed_fields));
+            console.log('Changed fields:', changed_fields);
+
             $.AryaAjax({
                 url: 'website/update-stuednt-basic-details',
-                data: new FormData(this),
+                data: formData,
                 success_message: 'Profile Data Updated Successfully..',
                 validation: validation
             }).then((d) => {
@@ -415,26 +428,57 @@ document.addEventListener('DOMContentLoaded', function (d) {
         ,
     });
 
-    $(document).on('click', '.student_request', function () {
-        var id = $(this).data('id');
-        SwalWarning('Confirmation','Are you sure you want to Send Request?',true,'Send Request').then((e) => {
-            if (e.isConfirmed) {
-                $.AryaAjax({
-                    url: 'student/send-request',
-                    data: { id },
-                    success_message: 'Request Sent Successfully.'
-                }).then((f) => {
-                    if(f.status){
-                        location.href = location.href;
-                    }
-                    showResponseError(f);
-                });
-            }
-            else{
-                toastr.warning('Request Aborted');
-            }
-        })
+    // $(document).on('click', '.student_request', function () {
+    //     var id = $(this).data('id');
+    //     SwalWarning('Confirmation','Are you sure you want to Send Request?',true,'Send Request').then((e) => {
+    //         if (e.isConfirmed) {
+    //             $.AryaAjax({
+    //                 url: 'student/send-request',
+    //                 data: { id },
+    //                 success_message: 'Request Sent Successfully.'
+    //             }).then((f) => {
+    //                 if(f.status){
+    //                     location.href = location.href;
+    //                 }
+    //                 showResponseError(f);
+    //             });
+    //         }
+    //         else{
+    //             toastr.warning('Request Aborted');
+    //         }
+    //     })
+    // });
+
+    // Publish Changes After Admin Approval
+$(document).on('click', '.publish_student', function () {
+    const student_id = $(this).data('id');
+
+    Swal.fire({
+        title: 'Confirm Publish',
+        text: 'Do you want to publish the approved changes and notify the student?',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Publish',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(base_url + "ajax/student/publish_student", { student_id: student_id }, function (res) {
+                if (res.status) {
+                    toastr.success('Student profile updated and notification sent.');
+                    setTimeout(function () {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    toastr.error(res.message || 'Failed to publish changes.');
+                }
+            }, 'json');
+        }
     });
+});
+
+    
+    
+    
 $(document).ready(function () {
     $('select[name="experience"]').val('');
     $('select[name="fluancy_in_english"]').val('');
@@ -478,9 +522,38 @@ updateDropdownText('.role-checkbox', '#selectedRoles', '#roleDropdownText', 'Sel
 });
 
 
+$(document).ready(function () {
+    // Send Request To Change Student Details
+    $(document).on('click', '.student_request', function () {
+        let id = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You want to request a change for this student's details.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Send Request',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post(base_url + "ajax/student/send_request", { id: id }, function (res) {
+                    if (res.status) {
+                        toastr.success('Change Request Sent Successfully.');
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(res.error || 'Something went wrong.');
+                    }
+                }, 'json');
+            }
+        });
+    });
+    
+
+    
 
 
 
 
-
+})
 })

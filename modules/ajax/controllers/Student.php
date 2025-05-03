@@ -7,21 +7,110 @@ class Student extends Ajax_Controller
         $this->response('url', 'Welcome');
         $this->response('status', true);
     }
-    function send_request()
-    {
-        $data = [];
-        $student_id = $this->post('id');
-        if($this->center_model->isCenter()) {
-            $center_id = $this->center_model->loginId();
-        }
-        $status = 1;
-        $data['student_id'] = $student_id;
-        $data['center_id']  = $center_id;
-        $data['status']     = $status;
-        $data['date'] = date('d-m-Y H:i:s');
-        $this->db->insert('student_change', $data);
-        $this->response('status', true);
+    // function send_request()
+    // {
+    //     $data = [];
+    //     $student_id = $this->post('id');
+    //     if($this->center_model->isCenter()) {
+    //         $center_id = $this->center_model->loginId();
+    //     }
+    //     $status = 1;
+    //     $data['student_id'] = $student_id;
+    //     $data['center_id']  = $center_id;
+    //     $data['status']     = $status;
+    //     $data['date'] = date('d-m-Y H:i:s');
+    //     $this->db->insert('student_change', $data);
+    //     $this->response('status', true);
+    // }
+
+   
+    public function send_request()
+{
+    $student_id = $this->post('id');
+    $center_id = $this->center_model->isCenter() ? $this->center_model->loginId() : 0;
+
+    $this->db->insert('student_change', [
+        'student_id' => $student_id,
+        'center_id' => $center_id,
+        'status' => 1,
+        'date' => date('d-m-Y H:i:s')
+    ]);
+
+    $student = $this->db->where('id', $student_id)->get('students')->row();
+    $center = $this->db->where('id', $center_id)->get('centers')->row();
+
+    $this->load->library('email');
+    $this->email->initialize([
+        'protocol'  => 'smtp',
+        'smtp_host' => 'ssl://smtp.gmail.com',
+        'smtp_port' => 465,
+        'smtp_user' => 'isdmnxt@gmail.com',
+        'smtp_pass' => 'zpeh ivui sqdt fvkz',
+        'mailtype'  => 'html',
+        'charset'   => 'utf-8',
+        'newline'   => "\r\n"
+    ]);
+
+    $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    $this->email->to('dkrpatel07@gmail.com');
+    $this->email->subject('📢 Student Detail Change Request Submitted – Action Required');
+
+    $logo_url = base_url('upload/logo.png');
+    $request_date = date('d M Y, h:i A');
+
+    $admin_message = '
+    <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+        <tr>
+            <td style="text-align: center;">
+                <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="100" />
+                <h2 style="color: #004aad; margin-top: 10px;">Student Change Request – Admin Attention Needed</h2>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #ffffff; padding: 20px; border-radius: 8px;">
+                <p>Hello <strong>ISDM NxT Admin</strong>,</p>
+                <p>An institute has submitted a <strong>student detail change request</strong>. Please review the details below:</p>
+
+                <h3 style="color: #004aad;">📋 Request Details</h3>
+                <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+                    <tr><td style="padding: 4px;"><strong>Institute Name:</strong></td><td>' . htmlspecialchars($center->institute_name) . '</td></tr>
+                    <tr><td style="padding: 4px;"><strong>Student Name:</strong></td><td>' . htmlspecialchars($student->name) . '</td></tr>
+                    <tr><td style="padding: 4px;"><strong>Roll No:</strong></td><td>' . htmlspecialchars($student->roll_no) . '</td></tr>
+                    <tr><td style="padding: 4px;"><strong>Request Date:</strong></td><td>' . $request_date . '</td></tr>
+                </table>
+
+                <p style="margin-top: 20px;">🔗 <a href="https://isdmnext.in/admin" style="color: #007bff; text-decoration: none;">Login to Admin Portal to Review</a></p>
+
+                <p style="margin-top: 30px;"><strong>Need Help?</strong><br>
+                ✉ support@isdmnext.in<br>
+                📞 +91-8320181598 | +91-8320876233</p>
+
+                <br>
+                <p>Thank you for ensuring accurate student records and maintaining ISDM NxT standards.</p>
+
+                <p>Best regards,<br><strong>ISDM NxT – Admin Desk</strong><br>
+                <a href="https://www.isdmnext.in" style="color: #007bff;">www.isdmnext.in</a></p>
+            </td>
+        </tr>
+    </table>';
+
+    $this->email->message($admin_message);
+
+    if (!$this->email->send()) {
+        log_message('error', 'Email failed: ' . $this->email->print_debugger());
+        $this->response(['status' => false, 'error' => 'Email not sent']);
+    } else {
+        $this->response(['status' => true, 'message' => 'Request submitted and email sent']);
     }
+}
+
+
+    
+
+
+
+
+
     function change_admission_status()
     {
         // $this->response($this->post());
@@ -1089,17 +1178,335 @@ class Student extends Ajax_Controller
         $this->response('data', $data);
     }
 
-    function approve_or_reject(){
-        $post = $this->post();
-        if($post['status'] == 'R'){
-            $this->db->update('student_change', ['status' => 3], ['id' => $post['id']]);
-            $this->response('status', true);
-        }
-        if($post['status'] == 'A'){
-            $this->db->update('student_change', ['status' => 2], ['id' => $post['id']]);
-            $this->response('status', true);
-        }
+    // function approve_or_reject(){
+    //     $post = $this->post();
+    //     if($post['status'] == 'R'){
+    //         $this->db->update('student_change', ['status' => 3], ['id' => $post['id']]);
+    //         $this->response('status', true);
+    //     }
+    //     if($post['status'] == 'A'){
+    //         $this->db->update('student_change', ['status' => 2], ['id' => $post['id']]);
+    //         $this->response('status', true);
+    //     }
+    // }
+
+    // function approve_or_reject() {
+    //     $post = $this->post();
+    
+    //     if ($post['status'] == 'R') {
+    //         $this->db->update('student_change', ['status' => 3], ['id' => $post['id']]);
+    //         $this->response('status', true);
+    //         return;
+    //     }
+    
+    //     if ($post['status'] == 'A') {
+    //         $this->db->update('student_change', ['status' => 2], ['id' => $post['id']]);
+    
+    //         // Fetch student and center details
+    //         $req = $this->db->select('m.*, s.name as student_name, s.roll_no, s.email, c.institute_name, c.email as center_email')
+    //             ->from('student_change as m')
+    //             ->join('students as s', 's.id = m.student_id')
+    //             ->join('centers as c', 'c.id = m.center_id')
+    //             ->where('m.id', $post['id'])
+    //             ->get()->row_array();
+    
+            // You can add actual field changes if stored
+            // $fields_updated = [
+            //     'Mobile Number' => '9876543210',
+            //     'Email' => $req['email'],
+            //     'Address' => 'Updated Address' // Replace this with actual logic
+            // ];
+    
+            // $fieldList = '';
+            // foreach ($fields_updated as $key => $val) {
+            //     $fieldList .= "‣ <strong>{$key}</strong>: {$val}<br>";
+            // }
+
+            // $changed_fields = json_decode($req['fields_updated'], true);
+            // $fieldList = '';
+            // foreach ($changed_fields as $field) {
+            //     $fieldList .= "‣ <strong>{$field}</strong><br>";
+            // }
+
+    
+            // // Email setup
+            // $this->load->library('email');
+            // $this->email->initialize([
+            //     'protocol' => 'smtp',
+            //     'smtp_host' => 'ssl://smtp.gmail.com',
+            //     'smtp_port' => 465,
+            //     'smtp_user' => 'isdmnxt@gmail.com',
+            //     'smtp_pass' => 'zpeh ivui sqdt fvkz', // Gmail App Password
+            //     'mailtype'  => 'html',
+            //     'charset'   => 'utf-8',
+            //     'newline'   => "\r\n"
+            // ]);
+    
+            // 📩 Email to Center
+            // $center_msg = "
+            // <p>Dear <strong>{$req['institute_name']}</strong>,</p>
+            // <p>The Student Detail Change Request submitted by your institute has been <strong>successfully approved</strong> by ISDM NxT Admin.</p>
+            // <h4>🔎 Updated Student Details:</h4>
+            // <ul>
+            //     <li><strong>Student Name:</strong> {$req['student_name']}</li>
+            //     <li><strong>Student ID:</strong> {$req['roll_no']}</li>
+            // </ul>
+            // <p><strong>Fields Updated:</strong><br>{$fieldList}</p>
+            // <p>
+            // 🔗 <strong>Institute Login:</strong> <a href='https://isdmnext.in/institute-login'>https://isdmnext.in/institute-login</a><br>
+            // 📞 8320181598 / 8320876233<br>✉️ info@isdmnext.in</p>
+            // <p>Best regards,<br>Team ISDM NxT<br><a href='https://isdmnext.in'>www.isdmnext.in</a></p>";
+    
+            // $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            // $this->email->to($req['center_email']);
+            // $this->email->subject('Student Details Updated Successfully – ISDM NxT Notification');
+            // $this->email->message($center_msg);
+            // $this->email->send();
+
+    //         $center_msg = "
+    //         <p>Dear <strong>{$req['institute_name']}</strong>,</p>
+    //         <p>We are pleased to inform you that the Student Detail Change Request submitted by your institute has been <strong>successfully approved</strong> by the ISDM NxT Admin Team.</p>
+    //         <p>The updated student information is now reflected in the system.</p>
+
+    //         <h4>🔎 Updated Student Details:</h4>
+    //         <ul>
+    //             <li><strong>Student Name:</strong> {$req['student_name']}</li>
+    //             <li><strong>Student ID:</strong> {$req['roll_no']}</li>
+    //         </ul>
+
+    //         <p><strong>Fields Updated:</strong><br>{$fieldList}</p>
+
+    //         <p><strong>📋 Important Note:</strong><br>
+    //         Please verify the updated details once again through your institute login portal for your reference and internal record-keeping.</p>
+
+    //         <p>
+    //         🔗 <strong>Institute Login:</strong> <a href='https://isdmnext.in/institute-login'>https://isdmnext.in/institute-login</a><br>
+    //         📞 8320181598 / 8320876233<br>✉️ info@isdmnext.in
+    //         </p>
+
+    //         <p>Thank you for maintaining accurate records with ISDM NxT!</p>
+    //         <p>Best regards,<br>Team ISDM NxT<br><a href='https://isdmnext.in'>www.isdmnext.in</a></p>";
+
+    
+    //         // 📩 Email to Student
+    //         $student_msg = "
+    //         <p>Dear <strong>{$req['student_name']}</strong>,</p>
+    //         <p>Your profile details have been successfully updated on the ISDM NxT platform.</p>
+    //         <ul>
+    //             <li><strong>Student ID:</strong> {$req['roll_no']}</li>
+    //         </ul>
+    //         <p><strong>Fields Updated:</strong><br>{$fieldList}</p>
+    //         <p>
+    //         🔗 <strong>Student Login:</strong> <a href='https://isdmnext.in/student-login'>https://isdmnext.in/student-login</a><br>
+    //         Username: {$req['roll_no']}<br>
+    //         📞 8320181598 / 8320876233<br>✉️ info@isdmnext.in</p>
+    //         <p>Thank you for being part of ISDM NxT!</p>
+    //         <p>Best regards,<br>Team ISDM NxT<br><a href='https://isdmnext.in'>www.isdmnext.in</a></p>";
+    
+    //         $this->email->to($req['email']);
+    //         $this->email->subject('Your Profile Details Have Been Successfully Updated – ISDM NxT');
+    //         $this->email->message($student_msg);
+    //         $this->email->send();
+    
+    //         $this->response('status', true);
+    //     }
+    // }
+
+    public function approve_or_reject()
+{
+    $post = $this->post();
+
+    if ($post['status'] == 'R') {
+        $this->db->update('student_change', ['status' => 3], ['id' => $post['id']]);
+        $this->response('status', true);
+        return;
     }
+
+    if ($post['status'] == 'A') {
+        $this->db->update('student_change', ['status' => 2], ['id' => $post['id']]);
+
+        $req = $this->db->select('m.*, s.name as student_name, s.roll_no, c.institute_name, c.email as center_email')
+            ->from('student_change as m')
+            ->join('students as s', 's.id = m.student_id')
+            ->join('centers as c', 'c.id = m.center_id')
+            ->where('m.id', $post['id'])
+            ->get()->row_array();
+
+        $this->load->library('email');
+        $this->email->initialize([
+            'protocol' => 'smtp',
+            'smtp_host' => 'ssl://smtp.gmail.com',
+            'smtp_port' => 465,
+            'smtp_user' => 'isdmnxt@gmail.com',
+            'smtp_pass' => 'zpeh ivui sqdt fvkz',
+            'mailtype'  => 'html',
+            'charset'   => 'utf-8',
+            'newline'   => "\r\n"
+        ]);
+
+        $logo_url = base_url('upload/logo.png');
+        $request_date = date('d M Y, h:i A');
+
+        $center_msg = '
+        <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+            <tr>
+                <td style="text-align: center;">
+                    <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="100" />
+                    <h2 style="color: #004aad; margin-top: 10px;">Student Detail Change Request Approved</h2>
+                </td>
+            </tr>
+            <tr>
+                <td style="background-color: #ffffff; padding: 20px; border-radius: 8px;">
+                    <p>Hello <strong>' . htmlspecialchars($req['institute_name']) . '</strong>,</p>
+                    <p>Your student detail change request has been <strong style="color:green;">approved</strong> by the ISDM NxT Admin Team.</p>
+
+                    <h3 style="color: #004aad;">📋 Approved Details</h3>
+                    <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+                        <tr><td style="padding: 4px;"><strong>Student Name:</strong></td><td>' . htmlspecialchars($req['student_name']) . '</td></tr>
+                        <tr><td style="padding: 4px;"><strong>Roll No:</strong></td><td>' . htmlspecialchars($req['roll_no']) . '</td></tr>
+                        <tr><td style="padding: 4px;"><strong>Approval Date:</strong></td><td>' . $request_date . '</td></tr>
+                    </table>
+
+                    <p style="margin-top: 20px;">🔗 <strong>Institute Login:</strong> <a href="https://isdmnext.in/institute-login" style="color: #007bff;">Login to Institute Panel</a></p>
+
+                    <p style="margin-top: 20px;"><strong>Need Help?</strong><br>
+                    ✉ support@isdmnext.in<br>
+                    📞 +91-8320181598 | +91-8320876233</p>
+
+                    <br>
+                    <p>Thank you for keeping student records updated.</p>
+                    <p>Best regards,<br><strong>ISDM NxT – Admin Team</strong><br>
+                    <a href="https://www.isdmnext.in" style="color: #007bff;">www.isdmnext.in</a></p>
+                </td>
+            </tr>
+        </table>';
+
+        $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+        $this->email->to($req['center_email']);
+        $this->email->subject('Student Detail Change Request Approved – ISDM NxT');
+        $this->email->message($center_msg);
+        $this->email->send();
+
+        $this->response('status', true);
+    }
+}
+
+    
+
+    // function notify_student_after_publish($change_id) {
+    //     $req = $this->db->select('m.*, s.name as student_name, s.roll_no, s.email')
+    //         ->from('student_change as m')
+    //         ->join('students as s', 's.id = m.student_id')
+    //         ->where('m.id', $change_id)
+    //         ->get()->row_array();
+    
+    //     $changed_fields = json_decode($req['fields_updated'], true);
+    //     $fieldList = '';
+    //     foreach ($changed_fields as $field) {
+    //         $fieldList .= "‣ <strong>{$field}</strong><br>";
+    //     }
+    
+    //     $this->load->library('email');
+    //     $this->email->initialize([
+    //         'protocol' => 'smtp',
+    //         'smtp_host' => 'ssl://smtp.gmail.com',
+    //         'smtp_port' => 465,
+    //         'smtp_user' => 'isdmnxt@gmail.com',
+    //         'smtp_pass' => 'zpeh ivui sqdt fvkz',
+    //         'mailtype'  => 'html',
+    //         'charset'   => 'utf-8',
+    //         'newline'   => "\r\n"
+    //     ]);
+    
+    //     $student_msg = "
+    //     <p>Hello <strong>{$req['student_name']}</strong>,</p>
+    //     <p>Your profile details have been successfully updated on the ISDM NxT platform.</p>
+    //     <ul>
+    //         <li><strong>Student ID:</strong> {$req['roll_no']}</li>
+    //     </ul>
+    //     <p><strong>Fields Updated:</strong><br>{$fieldList}</p>
+    //     <p>
+    //     🔗 <strong>Student Login:</strong> <a href='https://isdmnext.in/student-login'>https://isdmnext.in/student-login</a><br>
+    //     Username: {$req['roll_no']}<br>
+    //     📞 8320181598 / 8320876233<br>✉️ info@isdmnext.in</p>
+    //     <p>Thank you for being part of ISDM NxT!</p>
+    //     <p>Best regards,<br>Team ISDM NxT<br><a href='https://isdmnext.in'>www.isdmnext.in</a></p>";
+    
+    //     $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    //     $this->email->to($req['email']);
+    //     $this->email->subject('Your Profile Details Have Been Successfully Updated – ISDM NxT');
+    //     $this->email->message($student_msg);
+    //     $this->email->send();
+    
+    //     return true;
+    // }
+    
+    // function notify_student_after_publish($change_id) {
+    //     $req = $this->db->select('m.*, s.name as student_name, s.roll_no, s.email')
+    //         ->from('student_change as m')
+    //         ->join('students as s', 's.id = m.student_id')
+    //         ->where('m.id', $change_id)
+    //         ->get()->row_array();
+    
+    //     // Check and format changed fields
+    //     $fieldList = '';
+    //     $changed_fields = [];
+    
+    //     if (!empty($req['fields_updated'])) {
+    //         $decoded = json_decode($req['fields_updated'], true);
+    //         if (is_array($decoded)) {
+    //             $changed_fields = $decoded;
+    //         }
+    //     }
+    
+    //     foreach ($changed_fields as $field) {
+    //         $fieldList .= "‣ <strong>{$field}</strong><br>";
+    //     }
+    
+    //     // Initialize email
+    //     $this->load->library('email');
+    //     $this->email->initialize([
+    //         'protocol' => 'smtp',
+    //         'smtp_host' => 'ssl://smtp.gmail.com',
+    //         'smtp_port' => 465,
+    //         'smtp_user' => 'isdmnxt@gmail.com',
+    //         'smtp_pass' => 'zpeh ivui sqdt fvkz',
+    //         'mailtype'  => 'html',
+    //         'charset'   => 'utf-8',
+    //         'newline'   => "\r\n"
+    //     ]);
+    
+    //     // Compose email
+    //     $student_msg = "
+    //     <p>Hello <strong>{$req['student_name']}</strong>,</p>
+    //     <p>Your profile details have been successfully updated on the ISDM NxT platform.</p>
+    //     <ul>
+    //         <li><strong>Student ID:</strong> {$req['roll_no']}</li>
+    //     </ul>
+    //     <p><strong>Fields Updated:</strong><br>{$fieldList}</p>
+    //     <p>
+    //     🔗 <strong>Student Login:</strong> <a href='https://isdmnext.in/student-login'>https://isdmnext.in/student-login</a><br>
+    //     Username: {$req['roll_no']}<br>
+    //     📞 8320181598 / 8320876233<br>✉️ info@isdmnext.in</p>
+    //     <p>Thank you for being part of ISDM NxT!</p>
+    //     <p>Best regards,<br>Team ISDM NxT<br><a href='https://isdmnext.in'>www.isdmnext.in</a></p>";
+    
+    //     $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    //     $this->email->to($req['email']);
+    //     $this->email->subject('Your Profile Details Have Been Successfully Updated – ISDM NxT');
+    //     $this->email->message($student_msg);
+    
+    //     // Send email and log
+    //     if (!$this->email->send()) {
+    //         log_message('error', 'Failed to send student profile update email: ' . $this->email->print_debugger());
+    //     } else {
+    //         log_message('info', 'Student profile update email sent to: ' . $req['email']);
+    //     }
+    
+    //     return true;
+    // }
+    
+    
 
     function list_student_feestatus(){
         if(empty($_GET['status'])){
@@ -1226,5 +1633,27 @@ private function send_student_welcome_email($student)
     $this->email->message($message);
     $this->email->send();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }

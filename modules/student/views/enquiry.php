@@ -53,21 +53,21 @@
                                     data-allow-clear="<?= $this->center_model->isAdmin() ?>">
                                     <option></option>
                                     <?php
-$list = $this->db->where('type', 'center')->get('centers')->result();
-foreach ($list as $row) {
-    $selected = $center_id == $row->id ? 'selected' : '';
-    if (isset($exam['id']) && !empty($exam['center_id'])) {
-        $selected = $exam['center_id'] == $row->id ? 'selected' : '';
-    }
+                                    $list = $this->db->where('type', 'center')->get('centers')->result();
+                                    foreach ($list as $row) {
+                                        $selected = $center_id == $row->id ? 'selected' : '';
+                                        if (isset($exam['id']) && !empty($exam['center_id'])) {
+                                            $selected = $exam['center_id'] == $row->id ? 'selected' : '';
+                                        }
 
-    echo '<option value="' . $row->id . '" ' 
-    . $selected 
-    . ' data-search="' . strtolower($row->name . ' ' . $row->institute_name) . '"'
-    . ' data-kt-rich-content-subcontent="' . $row->institute_name . '">'
-    . $row->name . ' (' . $row->institute_name . ')</option>';
+                                        echo '<option value="' . $row->id . '" ' 
+                                        . $selected 
+                                        . ' data-search="' . strtolower($row->name . ' ' . $row->institute_name) . '"'
+                                        . ' data-kt-rich-content-subcontent="' . $row->institute_name . '">'
+                                        . $row->name . ' (' . $row->institute_name . ')</option>';
 
-}
-?>
+                                    }
+                                    ?>
                                 </select>
                             </div>
 

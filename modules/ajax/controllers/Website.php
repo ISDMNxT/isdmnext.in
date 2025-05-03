@@ -451,16 +451,126 @@ private function send_email($to, $subject, $message)
     return $sent;
 }
 
-    function update_stuednt_basic_details()
-    {
-        $id = $this->post('student_id');
-        $data = $this->post();
-        unset($data['student_id']);
-        $this->db->update('students', $data, ['id' => $id]);
-        $this->db->update('student_change', ['status' => 4], ['student_id' => $id]);
-        $this->response('status', true);
-        $this->response('student_data', $this->post());
+function update_stuednt_basic_details()
+{
+    $student_id = $this->post('student_id');
+
+    // Fetch current student data
+    $student = $this->student_model->get_student_via_id($student_id)->row_array();
+
+    if (!$student) {
+        return $this->response(['status' => false, 'message' => 'Student not found.']);
     }
+
+    // Prepare update data from POST
+    $data = [
+        'name'               => $this->post('name'),
+        'gender'             => $this->post('gender'),
+        'dob'                => $this->post('dob'),
+        'status'             => $this->post('status'),
+        'contact_number'     => $this->post('contact_number'),
+        'contact_no_type'    => $this->post('contact_no_type'),
+        'alternative_mobile' => $this->post('alternative_mobile'),
+        'alt_mobile_type'    => $this->post('alt_mobile_type'),
+        'email'              => $this->post('email'),
+        'father_name'        => $this->post('father_name'),
+        'mother_name'        => $this->post('mother_name'),
+        'family_id'          => $this->post('family_id'),
+        'address'            => $this->post('address'),
+    ];
+
+    $changed_fields = [];
+    foreach ($data as $key => $value) {
+        if (!isset($student[$key]) || $student[$key] != $value) {
+            $changed_fields[] = $key;
+        }
+    }
+
+    // Update the database
+    $this->db->where('id', $student_id)->update('isdm_students', $data);
+
+    // Email logic moved here
+    $student = array_merge($student, $data); // merge for fresh values
+    $this->send_publish_email($student, $changed_fields);
+
+    $this->response('status', true);
+    $this->response('student_data', $data);
+    $this->response('message', 'Profile updated and email sent.');
+}
+
+
+private function send_publish_email($student, $fields_updated = [])
+{
+    if (empty($student) || empty($student['email'])) {
+        log_message('error', 'Student not found or missing email');
+        return false;
+    }
+
+    $this->load->library('email');
+    $this->email->initialize([
+        'protocol'  => 'smtp',
+        'smtp_host' => 'ssl://smtp.gmail.com',
+        'smtp_port' => 465,
+        'smtp_user' => 'isdmnxt@gmail.com',
+        'smtp_pass' => 'zpeh ivui sqdt fvkz',
+        'mailtype'  => 'html',
+        'charset'   => 'utf-8',
+        'newline'   => "\r\n"
+    ]);
+
+    $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    $this->email->to($student['email']);
+    $this->email->subject('✅ Your Profile Has Been Updated');
+
+    $logo_url = base_url('upload/logo.png'); // adjust path as needed
+
+    $fields_html = !empty($fields_updated)
+        ? "<ul style='padding-left:20px;'>" . implode('', array_map(fn($f) => "<li>" . ucwords(str_replace('_', ' ', $f)) . "</li>", $fields_updated)) . "</ul>"
+        : "<p>(No specific changes detected)</p>";
+
+    $message = '
+    <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td style="text-align: center;">
+                <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="80px" style="margin-bottom: 10px;" />
+                <h2 style="color: #004aad; margin: 0;">Profile Update Confirmation</h2>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #ffffff; padding: 20px; border-radius: 8px;">
+                <p>Hello <strong>' . htmlspecialchars($student['name']) . '</strong>,</p>
+                <p>Your profile has been <strong>successfully updated</strong> by your training institute.</p>
+                <h3 style="color: #004aad; margin-bottom: 5px;">🔄 Updated Fields:</h3>
+                ' . $fields_html . '
+                <p><strong>Updated On:</strong> ' . date('d M Y, h:i A') . '</p>
+                <br>
+                <p>If you did not request these changes or notice incorrect information, please contact your center immediately.</p>
+                <p style="margin-top: 20px;"><strong>Need Help?</strong><br>
+                ✉ support@isdmnext.in<br>
+                📞 +91-8320181598 | +91-8320876233</p>
+                <br>
+                <p>Regards,<br><strong>ISDM NxT</strong><br>
+                <a href="https://www.isdmnext.in" style="color: #007bff;">www.isdmnext.in</a></p>
+            </td>
+        </tr>
+    </table>';
+
+    $this->email->message($message);
+
+    if (!$this->email->send()) {
+        log_message('error', 'Email sending failed: ' . $this->email->print_debugger());
+        return false;
+    }
+
+    return true;
+}
+
+
+
+
+
+
+
     function student_login_form()
     {
         // sleep(5);
