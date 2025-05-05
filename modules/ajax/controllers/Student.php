@@ -775,8 +775,72 @@ class Student extends Ajax_Controller
         ];
         $this->db->insert('marksheets_request', $data);
 
+         // Fetch related data for email
+    $student = $this->db->get_where('students', ['id' => $post['student_id']])->row();
+    $center = $this->db->get_where('centers', ['id' => $post['center_id']])->row();
+    $course = $this->db->get_where('course', ['id' => $post['course_id']])->row();
+
+    // Send admin email
+    $this->send_admin_certificate_email([
+        'institute_name' => $center->institute_name ?? 'N/A',
+        'student_name' => $student->name ?? 'N/A',
+        'student_id' => $student->roll_no ?? 'N/A',
+        'course_name' => $course->course_name ?? 'N/A',
+        'certificate_type' => 'Marksheet + Certificate'
+    ]);
+
         $this->response('status', true);
     }
+
+    private function send_admin_certificate_email($data)
+    {
+        $admin_email = "keyurpatel3063@gmail.com";
+        $logo_url = base_url('assets/logo.png');
+
+        $message = '
+        <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+            <tr>
+                <td style="text-align: center;">
+                    <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="100" />
+                    <h2 style="color: #004aad;">New Student Certificate Request – Action Required</h2>
+                </td>
+            </tr>
+            <tr>
+                <td style="background-color: #ffffff; padding: 20px; border-radius: 8px;">
+                    <p>Hello <strong>ISDM NxT Admin Team</strong>,</p>
+                    <p>A certificate request has been submitted from a center.</p>
+
+                    <h3 style="color: #004aad;">📋 Request Details:</h3>
+                    <table style="width: 100%; margin-top: 10px;">
+                        <tr><td><strong>Institute Name:</strong></td><td>' . $data['institute_name'] . '</td></tr>
+                        <tr><td><strong>Student Name:</strong></td><td>' . $data['student_name'] . '</td></tr>
+                        <tr><td><strong>Student ID:</strong></td><td>' . $data['student_id'] . '</td></tr>
+                        <tr><td><strong>Course Name:</strong></td><td>' . $data['course_name'] . '</td></tr>
+                        <tr><td><strong>Certificate Type:</strong></td><td>' . $data['certificate_type'] . '</td></tr>
+                        <tr><td><strong>Submitted On:</strong></td><td>' . date('d M Y, h:i A') . '</td></tr>
+                    </table>
+
+                    <p style="margin-top: 20px;"><strong>🔗 Admin Login:</strong>
+                    <a href="https://isdmnext.in/admin-login" style="color: #007bff;">https://isdmnext.in/admin-login</a></p>
+
+                    <p><strong>📞 Support:</strong><br>
+                    ✉️ info@isdmnext.in<br>
+                    📞 8320181598 / 8320876233</p>
+
+                    <p>Regards,<br><strong>ISDM NxT System</strong></p>
+                </td>
+            </tr>
+        </table>';
+
+        $this->load->library('email');
+        $this->email->from('noreply@isdmnext.in', 'ISDM NxT');
+        $this->email->to($admin_email);
+        $this->email->subject('New Certificate Request Submitted');
+        $this->email->message($message);
+        $this->email->set_mailtype('html');
+        $this->email->send();
+    }
+
     function list_marksheets_request()
 {
     header('Content-Type: application/json');
