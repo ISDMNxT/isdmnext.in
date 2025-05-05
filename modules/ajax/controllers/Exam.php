@@ -461,6 +461,8 @@ class Exam extends Ajax_Controller
             $this->db->where('id', $isEdit)->update('exams_master', $data);
     
             if ($submit_type == 'A') {
+                $student_rows = ''; // Initialize the string to collect all student rows
+
                 foreach ($students as $stu_id) {
                     foreach ($subjects as $index => $sub_id) {
                         $addArray = [
@@ -489,7 +491,125 @@ class Exam extends Ajax_Controller
                         $datan['duration'] = $this->post("cduration");
                         $datan['added_by'] = $this->student_model->login_type();
                         $this->db->insert('admit_cards', $datan);
-                    }
+                        // Define variables used in email
+$exam_title = $this->db->select('course_name')->from('course')->where('id', $datan['course_id'])->get()->row('course_name');
+$admit_date = date('d M Y', strtotime($datan['exam_date']));
+$center = $this->db->select('institute_name,email')->from('centers')->where('id', $datan['center_id'])->get()->row();
+
+// Fallback check
+$center_email = isset($center->email) ? $center->email : null;
+$center_name = isset($center->institute_name) ? $center->institute_name : 'Your Institute';
+$student = $this->db->select('name, id, email')->from('students')->where('id', $stu_id)->get()->row();
+$student_email = isset($student->email) ? $student->email : null;
+$enrollment_no = $datan['enrollment_no']; // needed for email template
+
+// Email to Student
+$subject_student = '✅ Your Admit Card is Ready – ISDM NxT';
+$message_student = '
+<table style="font-family: Arial; background: #f4f4f4; padding: 20px;">
+  <tr>
+    <td>
+      <h2 style="color: #004aad;">ISDM NxT – Admit Card Issued</h2>
+      <p>Hello <strong>' . $student->name . '</strong>,</p>
+      <p>Your admit card for the upcoming exam has been successfully generated.</p>
+      <p><strong>Exam:</strong> ' . $exam_title . '<br>
+      <strong>Date:</strong> ' . $admit_date . '<br>
+      <strong>Enrollment No.:</strong> ' . $enrollment_no . '</p>
+      <p>You can access your admit card by logging into your ISDM NxT student portal.</p>
+      <br><p>Regards,<br><strong>ISDM NxT Team</strong></p>
+    </td>
+  </tr>
+</table>';
+
+// Email to Admin/Center
+$subject_admin = '📢 Admit Cards Generated – ISDM NxT';
+
+$message_admin = '
+<table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+  <tr>
+    <td>
+      <h2 style="color: #004aad;">Admit Cards Generated</h2>
+      <p>Hello <strong>ISDM NxT Admin</strong>,</p>
+      <p>The following students have had their admit cards generated:</p>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background-color: #e0e0e0;">
+            <th style="padding: 8px; border: 1px solid #ccc;">Student Name</th>
+            <th style="padding: 8px; border: 1px solid #ccc;">Student ID</th>
+            <th style="padding: 8px; border: 1px solid #ccc;">Enrollment No.</th>
+            <th style="padding: 8px; border: 1px solid #ccc;">Course/Exam</th>
+            <th style="padding: 8px; border: 1px solid #ccc;">Exam Date</th>
+          </tr>
+        </thead>
+        <tbody>' . $student_rows . '</tbody>
+      </table>
+      <br><p>Regards,<br><strong>ISDM NxT Team</strong></p>
+    </td>
+  </tr>
+</table>';
+if ($student_email) {
+    $this->load->library('email');
+    $this->email->from('info@isdmnext.in', 'ISDM NxT');
+    $this->email->to($student_email);
+    $this->email->subject($subject_student);
+    $this->email->set_mailtype("html");
+    $this->email->message($message_student);
+    $this->email->send();
+}
+
+// Add to admin email table
+$student_rows .= '
+<tr>
+    <td style="padding: 8px; border: 1px solid #ccc;">' . $student->name . '</td>
+    <td style="padding: 8px; border: 1px solid #ccc;">' . $student->id . '</td>
+    <td style="padding: 8px; border: 1px solid #ccc;">' . $enrollment_no . '</td>
+    <td style="padding: 8px; border: 1px solid #ccc;">' . $exam_title . '</td>
+    <td style="padding: 8px; border: 1px solid #ccc;">' . $admit_date . '</td>
+</tr>';
+}
+}
+
+// Send single consolidated email to Admin
+
+if (!empty($student_rows) && $center_email) {
+$subject_admin = '📢 Exam Request Approved & Admit Cards Generated – ISDM NxT';
+$message_admin = '
+<table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+<tr>
+    <td>
+        <h2 style="color: #004aad;">Exam Request Approved for '.$data["exam_title"].'</h2>
+        <p>Hello <strong> '.$center->institute_name.' </strong>,</p>
+        <p>The following students have had their admit cards generated:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="background-color: #e0e0e0;">
+                    <th style="padding: 8px; border: 1px solid #ccc;">Student Name</th>
+                    <th style="padding: 8px; border: 1px solid #ccc;">Student ID</th>
+                    <th style="padding: 8px; border: 1px solid #ccc;">Enrollment No.</th>
+                    <th style="padding: 8px; border: 1px solid #ccc;">Course/Exam</th>
+                    <th style="padding: 8px; border: 1px solid #ccc;">Exam Date</th>
+                </tr>
+            </thead>
+            <tbody>' . $student_rows . '</tbody>
+        </table>
+        <br><p>Regards,<br><strong>ISDM NxT System Notification</strong></p>
+    </td>
+</tr>
+</table>';
+$this->load->library('email');
+$this->email->from('info@isdmnext.in', 'ISDM NxT');
+$this->email->to($center_email);
+$this->email->subject($subject_admin);
+$this->email->set_mailtype("html");
+$this->email->message($message_admin);
+$this->email->send();
+
+// Send Emails
+// if ($center_email)  $this->send_email($center_email, $subject_admin, $message_admin);
+
+          
+
+                    
                 }
             }
         } else {
@@ -508,6 +628,24 @@ class Exam extends Ajax_Controller
             $exam_name = $this->db->select('course_name')->from('course')->where('id', $data['course_id'])->get()->row();
             $request_date = date('d M, Y h:i A', strtotime($data['request_time']));
             $logo_url = base_url('upload/logo.png');
+
+
+            $student_rows = ''; // initialize student rows
+
+            foreach ($students as $student_id) {
+                $student = $this->db->select('name, id')->from('students')->where('id', $student_id)->get()->row();
+                $exam_name = $this->db->select('course_name')->from('course')->where('id', $data['course_id'])->get()->row();
+                $request_date = date('d M, Y h:i A', strtotime($data['request_time']));
+
+                $student_rows .= '
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ccc;">' . $student->name . '</td>
+                        <td style="padding: 8px; border: 1px solid #ccc;">' . $student->id . '</td>
+                        <td style="padding: 8px; border: 1px solid #ccc;">' . $exam_name->course_name . '</td>
+                        <td style="padding: 8px; border: 1px solid #ccc;">' . $request_date . '</td>
+                    </tr>';
+            }
+
     
             // Build HTML email
             $admin_message = '
@@ -515,34 +653,39 @@ class Exam extends Ajax_Controller
                 <tr>
                     <td style="text-align: center;">
                         <img src="' . $logo_url . '" alt="ISDM NxT Logo" height="120px" />
-                        <h2 style="color: #004aad;">New Student Exam Request – Action Required</h2>
+                        <h2 style="color: #004aad;">New Student Exam Requests – Action Required</h2>
                     </td>
                 </tr>
                 <tr>
                     <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
                         <p>Hello <strong>ISDM NxT Admin</strong>,</p>
-                        <p>A new student exam request has been submitted by an institute.</p>
+                        <p>The following exam requests have been submitted by <strong>' . $center->institute_name . '</strong>.</p>
                         <h3 style="color: #004aad;">📋 Request Details:</h3>
-                        <table style="width: 100%; margin-top: 10px;">
-                            <tr><td><strong>Institute Name:</strong></td><td>' . $center->institute_name . '</td></tr>
-                            <tr><td><strong>Student Name:</strong></td><td>' . $student->name . '</td></tr>
-                            <tr><td><strong>Student ID:</strong></td><td>' . $student->id . '</td></tr>
-                            <tr><td><strong>Requested Exam:</strong></td><td>' . $exam_name->course_name . '</td></tr>
-                            <tr><td><strong>Request Date:</strong></td><td>' . $request_date . '</td></tr>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background-color: #e0e0e0;">
+                                    <th style="padding: 8px; border: 1px solid #ccc;">Student Name</th>
+                                    <th style="padding: 8px; border: 1px solid #ccc;">Student ID</th>
+                                    <th style="padding: 8px; border: 1px solid #ccc;">Exam</th>
+                                    <th style="padding: 8px; border: 1px solid #ccc;">Request Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>' . $student_rows . '</tbody>
                         </table>
                         <br>
-                        <p>Kindly log in and verify the request:</p>
+                        <p>Kindly log in and verify the requests:</p>
                         <p>➡️ <a href="https://isdmnext.in/admin-login" style="color: #007bff;">Access the Admin Portal</a></p>
                         <p style="margin-top: 20px;"><strong>Contact Support:</strong><br>
                         ✉️ info@isdmnext.in<br>
                         📞 8320181598 / 8320876233</p>
                         <p>Thank you for maintaining the quality of ISDM NxT examinations.</p>
                         <br>
-                        <p>Best regards,<br><strong>ISDM NxT – Admin Portal</strong><br>
-                        <a href="https://www.isdmenxt.in">www.isdmnext.in</a></p>
+                        <!--<p>Best regards,<br><strong>ISDM NxT – Admin Portal</strong><br>-->
+                        <a href="https://www.isdmnext.in">www.isdmnext.in</a></p>
                     </td>
                 </tr>
             </table>';
+
     
             // Send email
             $this->load->library('email');
