@@ -842,105 +842,154 @@ class Student extends Ajax_Controller
     }
 
     function list_marksheets_request()
-{
-    header('Content-Type: application/json');
-
-    $center_id = 0;
-    if (!empty($_GET['center']) && $_GET['center'] != 'undefined') {
-        $center_id = $_GET['center'];
+    {
+        $center_id = 0;
+        if(!empty($_GET['center']) && $_GET['center'] != 'undefined'){
+           $center_id = $_GET['center'];
+        }
+        $this->response('data', $this->student_model->marksheet_request($center_id)->result_array());
     }
-
-    $result = $this->student_model->marksheet_request($center_id)->result_array();
-
-    // 🔍 Print the actual data returned
-    echo json_encode([
-        'data' => $result
-    ]);
-}
 
 
     function deletemr($id){
         $this->response('status', $this->db->where('id', $id)->delete('marksheets_request'));
     }
-    function create_marksheet_certificate(){
-        $post = $this->post();
-        if($post['status'] == 'R'){
-            $this->db->update('marksheets_request', ['status' => 3], ['id' => $post['id']]);
-            $this->response('status', true);
-        }
+    
+    public function create_marksheet_certificate()
+{
+    $post = $this->post();
 
-        if($post['status'] == 'A'){
-           $this->db->update('marksheets_request', ['status' => 2], ['id' => $post['id']]);
-           $data = $this->db->select('*')
-            ->from('marksheets_request')
-            ->where('id', $post['id'])->get()->result_array();
+    $this->load->model('center_model');
+    $this->load->model('student_model');
 
-            if($data[0]['status'] == 2){
-                unset($data[0]['id']);
-                unset($data[0]['status']);
+    if ($post['status'] == 'R') {
+        $this->db->update('marksheets_request', ['status' => 3], ['id' => $post['id']]);
+        $this->response('status', true);
+    }
 
-                $this->db->insert('marksheets', $data[0]);
-                $marksheet_id               = $this->db->insert_id();
+    if ($post['status'] == 'A') {
+        $this->db->update('marksheets_request', ['status' => 2], ['id' => $post['id']]);
 
-                $where                      = [];
-                $npost                      = [];
-                $where['course_id']         = $data[0]['course_id'];
-                $where['duration']          = $data[0]['duration'];
-                $where['duration_type']     = $data[0]['duration_type'];
-                $where['isDeleted']         = 0;
-                $npost['student_id']        = $data[0]['student_id'];
-                $npost['course_id']         = $data[0]['course_id'];
-                $npost['center_id']         = $data[0]['center_id'];
-                
-                $subjectsArray              = $this->student_model->course_subject($where)->result_array();
-                $subjectArray               = [];
-                foreach($subjectsArray as $key => $value){
-                    $subjectArray[$value['subject_id']] = $value['id'];
-                }
+        $data = $this->db->select('*')->from('marksheets_request')->where('id', $post['id'])->get()->result_array();
 
-                $marks                      = $this->center_model->get_student_exam_marks($npost)->result_array();
-                $marksArray = [];
-                foreach($marks as $key => $value){
-                    if($value['paper_type'] == 'theortical'){
-                        $type = 'theory_marks';
-                    } else {
-                        $type = 'practical';
-                    }
-                    $marksArray[$subjectArray[$value['subject_id']]][$type] = $value['student_total_marks'];
-                }
-                
-                $subjects                   = [];
-                $k                          = 0;
-                foreach ($marksArray as $subject_id => $numbers) {
-                    $ttl = 0;
-                    $theory_marks = (isset($numbers['theory_marks'])) ?
-                        $numbers['theory_marks'] : 0;
-                    $practical = (isset($numbers['practical'])) ?
-                        $numbers['practical'] : 0;
-                    $num = [
-                        'theory_marks' => $theory_marks,
-                        'practical' => $practical
-                    ];
-                    $num['marksheet_id'] = $marksheet_id;
-                    $num['subject_id'] = $subject_id;
-                    $num['ttl'] = $theory_marks + $practical;
-                    $subjects[] = $num;
-                    $k++;
-                }
-                if ($k) {
-                    $this->db->insert_batch('marks_table', $subjects);
-                }
+        if ($data[0]['status'] == 2) {
+            unset($data[0]['id'], $data[0]['status']);
 
-                $npost['issue_date']         = $data[0]['date'];
-                $checkCertificate = $this->student_model->student_certificates($npost);
-                if (!$checkCertificate->num_rows()) {
-                    $this->db->insert('student_certificates', $npost);
-                }
+            $this->db->insert('marksheets', $data[0]);
+            $marksheet_id = $this->db->insert_id();
+
+            $where = [
+                'course_id' => $data[0]['course_id'],
+                'duration' => $data[0]['duration'],
+                'duration_type' => $data[0]['duration_type'],
+                'isDeleted' => 0
+            ];
+
+            $npost = [
+                'student_id' => $data[0]['student_id'],
+                'course_id' => $data[0]['course_id'],
+                'center_id' => $data[0]['center_id']
+            ];
+
+            $subjectsArray = $this->student_model->course_subject($where)->result_array();
+            $subjectMap = [];
+            foreach ($subjectsArray as $s) {
+                $subjectMap[$s['subject_id']] = $s['id'];
             }
 
-            $this->response('status', true);
+            $marks = $this->center_model->get_student_exam_marks($npost)->result_array();
+            $marksArray = [];
+            foreach ($marks as $m) {
+                $type = ($m['paper_type'] == 'theortical') ? 'theory_marks' : 'practical';
+                $marksArray[$subjectMap[$m['subject_id']]][$type] = $m['student_total_marks'];
+            }
+
+            $subjectRecords = [];
+            foreach ($marksArray as $subject_id => $entry) {
+                $theory = $entry['theory_marks'] ?? 0;
+                $practical = $entry['practical'] ?? 0;
+                $subjectRecords[] = [
+                    'marksheet_id' => $marksheet_id,
+                    'subject_id' => $subject_id,
+                    'theory_marks' => $theory,
+                    'practical' => $practical,
+                    'ttl' => $theory + $practical
+                ];
+            }
+
+            if (!empty($subjectRecords)) {
+                $this->db->insert_batch('marks_table', $subjectRecords);
+            }
+
+            $npost['issue_date'] = $data[0]['date'];
+            $checkCertificate = $this->student_model->student_certificates($npost);
+            if (!$checkCertificate->num_rows()) {
+                $this->db->insert('student_certificates', $npost);
+            }
+
+            // ✅ Send email notification after certificate generation
+            $student = $this->student_model->get_student_via_id($data[0]['student_id'])->row_array();
+            $center = $this->db->where('id', $data[0]['center_id'])->get('centers')->row_array();
+            $course = $this->db->where('id', $data[0]['course_id'])->get('course')->row_array();
+            $certificate_type = 'Completion'; // Customize if needed
+
+            $this->load->library('email');
+            $subject = "🎓 Certificate Generated – ISDM NxT Notification";
+
+            $message = "
+            <table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'>
+                <tr><td>
+                    <h2>📢 Certificate Issued Successfully</h2>
+                    <p>Hello <strong>{$center['institute_name']}</strong>,</p>
+
+                    <p>We are pleased to inform you that the certificate request has been successfully processed by the ISDM NxT Admin Team.</p>
+
+                    <h3>📋 Certificate Details:</h3>
+                    <ul>
+                        <li><strong>Student Name:</strong> {$student['student_name']}</li>
+                        <li><strong>Student ID:</strong> {$student['roll_no']}</li>
+                        <li><strong>Course Name:</strong> {$course['course_name']}</li>
+                        <li><strong>Certificate Type:</strong> {$certificate_type}</li>
+                        <li><strong>Issue Date:</strong> {$data[0]['date']}</li>
+                    </ul>
+
+                    <h3>🔗 Download Instructions:</h3>
+                    <ul>
+                        <li>Log in to your Institute Portal: <a href='https://isdmnext.in/institute-login'>https://isdmnext.in/institute-login</a></li>
+                        <li>Navigate to <strong>Certificate Section</strong></li>
+                        <li>Locate the student's record and download the certificate</li>
+                    </ul>
+
+                    <p><strong>⚠️ Please ensure you hand over the certificate to the student after verification.</strong></p>
+
+                    <p>📞 Need Help?<br>
+                    ✉️ <a href='mailto:info@isdmnext.in'>info@isdmnext.in</a><br>
+                    📱 8320181598 / 8320876233</p>
+
+                    <p>Warm regards,<br><strong>Team ISDM NxT</strong><br>
+                    🌐 <a href='https://isdmnext.in'>https://isdmnext.in</a></p>
+                </td></tr>
+            </table>
+            ";
+
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to($center['email']);
+            $this->email->subject($subject);
+            $this->email->message($message);
+
+            if (!$this->email->send()) {
+                log_message('error', 'Certificate email failed to send: ' . $this->email->print_debugger());
+            } else {
+                log_message('info', 'Certificate email successfully sent to center: ' . $center['email']);
+            }
         }
+
+        $this->response('status', true);
     }
+}
+
+
+
     function create_marksheet()
     {
         // $this->response($this->post());
