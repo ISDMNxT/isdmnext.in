@@ -334,51 +334,136 @@ private function send_email($to, $subject, $message)
         $this->response('data', $data);
         $this->response('status',$status);
     }
-    function add_staff()
-    {
-        $data = $this->post();
-        if(!empty($data['staff_id'])){
-                $id = $data['staff_id'];
-                $email = $data['email_id'];
-                unset($data['email_id']);
-                unset($data['staff_id']);
-                $data['email'] = $email;
-                if(!empty($_FILES['image']['name'])){
-                    $data['image'] = $this->file_up('image');
-                }
-                
-                $data['permission'] = json_encode($data['permission']);
-                
-                $this->response(
-                    'status',
-                    $this->db->where('id', $id)->update('centers', $data)
-                );
+    public function add_staff()
+{
+    $data = $this->post();
 
-        } else if(empty($data['staff_id'])){
-            if ($this->form_validation->run('add_staff_form')) {
-                $data['status'] = 1;
-                $data['added_by'] = 'center';
-                $data['type'] = 'staff';
-                $email = $data['email_id'];
-                unset($data['staff_id']);
-                unset($data['email_id']);
-                $data['email'] = $email;
-                $data['password'] = sha1($data['password']);
-                $data['image'] = $this->file_up('image');
-                $data['permission'] = json_encode($data['permission']);
-                if($this->center_model->isCenter()) {
-                    $data['parent_center_id'] = $this->center_model->loginId();
-                }
+    if (!empty($data['staff_id'])) {
+        // Update existing staff
+        $id = $data['staff_id'];
+        $email = $data['email_id'];
 
-                $this->response(
-                    'status',
-                    $this->db->insert('centers', $data)
-                );
-            } else
-                $this->response('html', $this->errors());
+        unset($data['staff_id'], $data['email_id']);
+        $data['email'] = $email;
+
+        if (!empty($_FILES['image']['name'])) {
+            $data['image'] = $this->file_up('image');
         }
-        
+
+        $data['permission'] = json_encode($data['permission']);
+
+        $updated = $this->db->where('id', $id)->update('centers', $data);
+        $this->response('status', $updated);
     }
+
+    if (empty($data['staff_id'])) {
+        if ($this->form_validation->run('add_staff_form')) {
+            $plain_password = $this->post('password'); // Save original password for email
+
+            $data['status'] = 1;
+            $data['added_by'] = 'center';
+            $data['type'] = 'staff';
+
+            $email = $data['email_id'];
+            unset($data['staff_id'], $data['email_id']);
+            $data['email'] = $email;
+            $data['password'] = sha1($plain_password);
+            $data['image'] = $this->file_up('image');
+            $data['permission'] = json_encode($data['permission']);
+
+            $center_name = 'Unknown Center';
+
+            if ($this->center_model->isCenter()) {
+                $center_id = $this->center_model->loginId();
+                $data['parent_center_id'] = $center_id;
+
+                $center = $this->db->where('id', $center_id)->get('centers')->row_array();
+                $center_name = !empty($center['institute_name']) ? $center['institute_name'] : 'Unknown Center';
+            }
+
+            $inserted = $this->db->insert('centers', $data);
+
+            if ($inserted) {
+                // ✅ Send email to Admin
+                $admin_email = 'keyurpatel3063@gmail.com'; // Replace with your admin email
+                $admin_subject = "👤 New Staff Added – ISDM NxT Notification";
+
+                $admin_message = "
+                <table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'>
+                    <tr><td>
+                        <h2>✅ New Staff Member Registered</h2>
+                        <p>Hello Admin,</p>
+
+                        <p>A new staff member has been successfully added by the center: <strong>{$center_name}</strong></p>
+
+                        <h3>📋 Staff Details:</h3>
+                        <ul>
+                            <li><strong>Name:</strong> {$data['name']}</li>
+                            <li><strong>Email:</strong> {$data['email']}</li>
+                            <li><strong>Contact:</strong> {$data['contact_number']}</li>
+                            <li><strong>Role:</strong> {$this->post('role')}</li>
+                        </ul>
+
+                        <p>You may review or manage this staff from your admin panel.</p>
+
+                        <p>Best regards,<br><strong>ISDM NxT Team</strong></p>
+                        <p>🌐 <a href='https://isdmnext.in'>https://isdmnext.in</a><br>
+                        📩 info@isdmnext.in<br>
+                        📞 8320181598 / 8320876233</p>
+                    </td></tr>
+                </table>";
+
+                $this->load->library('email');
+                $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+                $this->email->to($admin_email);
+                $this->email->subject($admin_subject);
+                $this->email->message($admin_message);
+                $this->email->set_mailtype("html");
+                $this->email->send();
+
+                // ✅ Send welcome email to Staff
+                $staff_subject = "👋 Welcome to ISDM NxT – Your Login Credentials";
+                $staff_message = "
+                <table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'>
+                    <tr><td>
+                        <h2>🎉 Welcome to ISDM NxT!</h2>
+                        <p>Hi <strong>{$data['name']}</strong>,</p>
+
+                        <p>You have been successfully registered as a staff member by <strong>{$center_name}</strong>.</p>
+
+                        <h3>🔐 Your Login Credentials:</h3>
+                        <ul>
+                            <li><strong>Login URL:</strong> <a href='https://isdmnext.in/institute-login'>https://isdmnext.in/institute-login</a></li>
+                            <li><strong>Email:</strong> {$data['email']}</li>
+                            <li><strong>Password:</strong> {$plain_password}</li>
+                        </ul>
+
+                        <p>Please log in and update your profile. Keep your credentials safe and do not share them.</p>
+
+                        <p>Best regards,<br><strong>ISDM NxT Team</strong></p>
+                        <p>🌐 <a href='https://isdmnext.in'>https://isdmnext.in</a><br>
+                        📩 info@isdmnext.in<br>
+                        📞 8320181598 / 8320876233</p>
+                    </td></tr>
+                </table>";
+
+                $this->email->clear();
+                $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+                $this->email->to($data['email']);
+                $this->email->subject($staff_subject);
+                $this->email->message($staff_message);
+                $this->email->set_mailtype("html");
+                $this->email->send();
+            }
+
+            $this->response('status', $inserted);
+        } else {
+            $this->response('html', $this->errors());
+        }
+    }
+}
+
+
     function update()
     {
         $id = $this->post('id');
