@@ -519,29 +519,153 @@ class Employer extends Ajax_Controller
         $this->response('html', $html);
     }
 
-    function job_mgmt(){
-        $data                       = $this->post();
-        $job_id                     = $data['job_id'];
+    function job_mgmt() {
+        $data = $this->post();
+    
+        $job_id = isset($data['job_id']) ? $data['job_id'] : 0;
         unset($data['job_id']);
-        $data['key_skills']         = json_encode($data['key_skills']);
-        $data['key_skills_text']    = json_encode($data['key_skills']);
-        if(!empty($job_id)){
+    
+        $key_skills = isset($data['key_skills']) ? $data['key_skills'] : [];
+        $data['key_skills'] = json_encode($key_skills);
+        $data['key_skills_text'] = json_encode($key_skills);
+    
+        if (!empty($job_id)) {
             $this->db->update('jobs', $data, ['id' => $job_id]);
             $this->response('msg', 'Job Updated Successfully.');
         } else {
-            $data['status']             = 'open';
-            $data['added_by']           = 'admin';
-            $status                     = $this->db->insert('jobs', $data);
-            $job_id                     = $this->db->insert_id();
+            $data['status'] = 'open';
+            $data['added_by'] = 'admin';
+            $this->db->insert('jobs', $data);
+            $job_id = $this->db->insert_id();
             $this->response('msg', 'Job Saved Successfully.');
+    
+            $employer = [];
+            if (!empty($data['employer_id'])) {
+                $employer = $this->db->where('id', $data['employer_id'])->get('centers')->row_array();
+            }
+            if (!$employer) {
+                $this->response('status', false);
+            }
+    
+            $job_title = isset($data['job_title']) ? $data['job_title'] : 'N/A';
+            $employment_type = isset($data['employment_type']) ? $data['employment_type'] : 'N/A';
+            $openings = isset($data['openings']) ? $data['openings'] : '1';
+            $education_id = isset($data['education_id']) ? $data['education_id'] : 'N/A';
+            $highlights = isset($data['job_highlights']) ? $data['job_highlights'] : '';
+    
+            $city = 'N/A';
+            if (!empty($data['city_id'])) {
+                $cityRow = $this->db->where('DISTRICT_ID', $data['city_id'])->get('isdm_district')->row_array();
+                if ($cityRow) {
+                    $city = $cityRow['DISTRICT_NAME'];
+                }
+            }
+    
+            $education_name = 'N/A';
+            if (!empty($education_id)) {
+                $eduRow = $this->db->where('id', $education_id)->get('isdm_education')->row_array();
+                if ($eduRow) {
+                    $education_name = $eduRow['qualification'];
+                }
+            }
+    
+            $this->load->library('email');
+    
+            // ✅ Admin Email
+            $admin_subject = "🚀 New Job Posting Submitted by Corporate – Action Required | ISDM NxT";
+            $admin_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
+                <h2>📢 New Job Vacancy Posted by Corporate</h2>
+                <p>Dear Admin Team,</p>
+                <p>Please review the job posting and take necessary actions.</p>
+                <h3>🏢 Corporate Details:</h3>
+                <ul>
+                    <li><strong>Company Name:</strong> {$employer['institute_name']}</li>
+                    <li><strong>Contact Person:</strong> {$employer['name']}</li>
+                    <li><strong>Corporate Email:</strong> {$employer['email']}</li>
+                </ul>
+                <h3>📄 Job Post Details:</h3>
+                <ul>
+                    <li><strong>Job Title:</strong> {$job_title}</li>
+                    <li><strong>Location:</strong> {$city}</li>
+                    <li><strong>Employment Type:</strong> {$employment_type}</li>
+                    <li><strong>Number of Openings:</strong> {$openings}</li>
+                    <li><strong>Eligibility Criteria:</strong> {$education_name}</li>
+                    <li><strong>Job Description Summary:</strong> {$highlights}</li>
+                </ul>
+                <p>🔔 Job ID: {$job_id}<br>📅 Posted on: " . date('d-m-Y H:i:s') . "</p>
+                <p>Best regards,<br>Team ISDM NxT</p>
+            </td></tr></table>";
+    
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to('keyurpatel3063@gmail.com');
+            $this->email->subject($admin_subject);
+            $this->email->message($admin_message);
+            $this->email->send();
+    
+            // ✅ Corporate Email
+            $corporate_subject = "🎉 Your Job Posting Has Been Successfully Added – ISDM NxT";
+            $corporate_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
+                <h2>🎉 Your Job Posting is Live!</h2>
+                <p>Dear {$employer['name']},</p>
+                <p>Thank you for submitting a job post. Here's the summary:</p>
+                <ul>
+                    <li><strong>Job Title:</strong> {$job_title}</li>
+                    <li><strong>Location:</strong> {$city}</li>
+                    <li><strong>Employment Type:</strong> {$employment_type}</li>
+                    <li><strong>Openings:</strong> {$openings}</li>
+                </ul>
+                <p><strong>👉 Portal Link:</strong> <a href='https://isdmnext.in/employer/index'>Access Your Portal</a></p>
+                <p>Best regards,<br>Team ISDM NxT</p>
+            </td></tr></table>";
+    
+            $this->email->clear();
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to($employer['email']);
+            $this->email->subject($corporate_subject);
+            $this->email->message($corporate_message);
+            $this->email->send();
+    
+            // ✅ Student Email - Sent via BCC
+            $students = $this->db
+                ->select('name, email')
+                ->where('status', 1)
+                ->get('isdm_students')
+                ->result_array();
+    
+            $student_emails = array_column($students, 'email');
+    
+            log_message('info', 'Sending job alert to ' . count($student_emails) . ' students');
+    
+            $student_subject = "🚀 New Job Opportunity Available on ISDM NxT – Apply Now";
+            $student_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
+                <h2>🚀 New Job Opportunity Just Posted!</h2>
+                <p>A new job has been posted on the ISDM NxT Portal:</p>
+                <ul>
+                    <li><strong>Job Title:</strong> {$job_title}</li>
+                    <li><strong>Company:</strong> {$employer['institute_name']}</li>
+                    <li><strong>Location:</strong> {$city}</li>
+                    <li><strong>Employment Type:</strong> {$employment_type}</li>
+                </ul>
+                <p><strong>Apply Now:</strong> <a href='https://isdmnext.in/student-login-'>https://isdmnext.in/student-login-</a></p>
+                <p>All the best!<br>Team ISDM NxT</p>
+            </td></tr></table>";
+    
+            $this->email->clear();
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to('isdmnxt@gmail.com');
+            $this->email->bcc($student_emails);
+            $this->email->subject($student_subject);
+            $this->email->message($student_message);
+            $this->email->send();
         }
-        
-        if($job_id){
-            $this->response('status', true);
-        } else {
-            $this->response('status', false);
-        }
+    
+        $this->response('status', (bool)$job_id);
     }
+    
+    
+    
+    
+    
 
     function list_jobs(){
         if ($this->center_model->isAdmin() OR $this->center_model->isMaster()){
