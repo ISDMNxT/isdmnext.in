@@ -1512,66 +1512,126 @@ private function send_publish_email($student, $fields_updated = [])
         $this->response('status', true);
     }
 
-    function send_interview_request(){
-        $data = $this->post();
-        $id = $data['id'];
-        unset($data['id']);
+    function send_interview_request()
+{
+    $data = $this->post();
+    $id = $data['id'];
+    unset($data['id']);
 
-        if($id && $data['student_status'] == 'approved'){
+    if ($id && $data['student_status'] == 'approved') {
 
-            $job_list = $this->db->select('*')
-                    ->from('send_interview_request as sir')
-                    ->join('emp_packages_trans as e', "e.employer_id = sir.employer_id and e.status = '1'", 'left')
-                    ->join('emp_packages as m', 'm.id = e.package_id', 'left')
-                    ->join('centers as c', 'c.id = sir.employer_id', 'left')
-                    ->where('sir.id',$id)
-                    ->get()->result_array();
-            /*pre($job_list[0]);
-            die;*/
+        // ✅ Get full details including student's center
+        $job_list = $this->db->select('
+                sir.*, j.job_title, j.work_location,
+                s.name as student_name, s.email as student_email, s.contact_number, s.center_id as student_center_id,
+                sc.institute_name as student_center_name,
+                c.institute_name, c.name as center_name, c.email as center_email, c.wallet,
+                m.interview_charges
+            ')
+            ->from('send_interview_request as sir')
+            ->join('jobs as j', 'j.id = sir.job_id', 'left')
+            ->join('isdm_students as s', 's.id = sir.student_id', 'left')
+            ->join('centers as sc', 'sc.id = s.center_id', 'left') // student's center
+            ->join('centers as c', 'c.id = sir.employer_id', 'left') // employer center
+            ->join('emp_packages_trans as e', "e.employer_id = sir.employer_id and e.status = '1'", 'left')
+            ->join('emp_packages as m', 'm.id = e.package_id', 'left')
+            ->where('sir.id', $id)
+            ->get()
+            ->result_array();
 
-            $close_balance = $job_list[0]['wallet'];
-            $deduction_amount = $job_list[0]['interview_charges'];
-
-            if(intval($close_balance) == 0){
-                $this->response('html', "Please recharge your wallet $deduction_amount.");
-                exit;
-            }
-
-            if(intval($deduction_amount) == 0){
-                $this->response('html', 'Charges is Low.');
-                exit;
-            }
-
-            $close_balance = $close_balance - $deduction_amount;
-            if ($close_balance < 0) {
-                $this->response('html', "Wallet Balance is should be minimum $deduction_amount.");
-                exit;
-            }
-
-            $dataq = [
-                'center_id' => $job_list[0]['employer_id'],
-                'amount' => $deduction_amount,
-                'o_balance' => $job_list[0]['wallet'],
-                'c_balance' => $close_balance,
-                'type' => 'send interview request',
-                'description' => 'Interview Request Accepted By Student',
-                'type_id' => $job_list[0]['student_id'],
-                'added_by' => 'center',
-                'order_id' => strtolower(generateCouponCode(12)),
-                'status' => 1,
-                'wallet_status' => 'debit'
-            ];
-            $this->db->insert('wallet_transcations', $dataq);
-            if($this->db->insert_id()){
-                $this->center_model->update_wallet($job_list[0]['employer_id'], $close_balance);
-                $this->db->update('send_interview_request', $data, ['id' => $id]);
-            }
-        } else {
-            $this->db->update('send_interview_request', $data, ['id' => $id]);
+        if (empty($job_list)) {
+            $this->response('status', false);
+            $this->response('html', 'Interview request not found.');
+            return;
         }
-        
-        $this->response('status', true);
+
+        $job = $job_list[0];
+        $close_balance = $job['wallet'];
+        $deduction_amount = $job['interview_charges'];
+
+        if (intval($close_balance) == 0) {
+            $this->response('html', "Please recharge your wallet ₹$deduction_amount.");
+            return;
+        }
+
+        if (intval($deduction_amount) == 0) {
+            $this->response('html', 'Interview charges are not configured.');
+            return;
+        }
+
+        $close_balance -= $deduction_amount;
+        if ($close_balance < 0) {
+            $this->response('html', "Insufficient wallet balance. Minimum ₹$deduction_amount required.");
+            return;
+        }
+
+        // ✅ Wallet transaction
+        $txn_data = [
+            'center_id'     => $job['employer_id'],
+            'amount'        => $deduction_amount,
+            'o_balance'     => $job['wallet'],
+            'c_balance'     => $close_balance,
+            'type'          => 'send interview request',
+            'description'   => 'Interview Request Accepted By Student',
+            'type_id'       => $job['student_id'],
+            'added_by'      => 'center',
+            'order_id'      => strtolower(generateCouponCode(12)),
+            'status'        => 1,
+            'wallet_status' => 'debit'
+        ];
+        $this->db->insert('wallet_transcations', $txn_data);
+
+        $this->center_model->update_wallet($job['employer_id'], $close_balance);
+        $this->db->update('send_interview_request', ['center_status' => 'approved', 'student_status' => 'approved'], ['id' => $id]);
+
+        // ✅ Email content
+        $subject = "🎉 Student Has Accepted Your Request – ISDM NxT";
+        $message = "
+            <p>Dear <strong>{$job['center_name']}</strong>,</p>
+            <p>We are pleased to inform you that <strong>{$job['student_name']}</strong> has accepted your request/offer through the ISDM NxT Portal! 🚀</p>
+
+            <h3>👤 Student Details:</h3>
+            <p><strong>Name:</strong> {$job['student_name']}<br>
+            <strong>Registered Institute:</strong> {$job['student_center_name']}<br>
+            <strong>Contact Email:</strong> {$job['student_email']}<br>
+            <strong>Phone Number:</strong> {$job['contact_number']}</p>
+
+            <h3>📄 Job Details:</h3>
+            <p><strong>Job Title:</strong> {$job['job_title']}<br>
+            <strong>Location:</strong> {$job['work_location']}</p>
+
+            <h3>🔗 Next Steps:</h3>
+            <p>You can now schedule interviews, discussions, or onboarding procedures directly with the student.</p>
+            <p>Manage everything securely via your ISDM NxT Corporate Portal:</p>
+            <p><a href='https://isdmnext.in/corporate-login' style='background: #006699; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;'>Login to Portal</a></p>
+
+            <h4>🛠 Need Assistance?</h4>
+            <p>✉️ Email: info@isdmnext.in<br>
+            📞 Phone: 8320181598 / 8320876233<br>
+            🌐 Website: <a href='https://www.isdmnext.in'>www.isdmnext.in</a></p>
+
+            <p>Thank you for trusting ISDM NxT to support your recruitment needs! 🎯</p>
+            <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
+        ";
+
+        // ✅ Send email
+        $this->load->library('email');
+        $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+        $this->email->to($job['center_email']);
+        $this->email->subject($subject);
+        $this->email->message($message);
+        $this->email->set_mailtype('html');
+        $this->email->send();
+
+    } else {
+        // Update for other status like reject
+        $this->db->update('send_interview_request', $data, ['id' => $id]);
     }
+
+    $this->response('status', true);
+}
+
+
 
     function received_interview_request(){
         $data = $this->post();
