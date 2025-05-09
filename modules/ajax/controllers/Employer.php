@@ -808,14 +808,105 @@ class Employer extends Ajax_Controller
     
     
 
-    function send_interview_request(){
-        $data = $this->post();
-        unset($data['student_name']);
-        $this->response(
-            'status',
-            $this->db->insert('send_interview_request', $data)
-        );
+    public function send_interview_request()
+{
+    $data = $this->post();
+    $student_id = $data['student_id'] ?? 0;
+    $job_id     = $data['job_id'] ?? 0;
+
+    // ✅ Fetch student
+    $student = $this->db->where('id', $student_id)->get('isdm_students')->row_array();
+
+    // ✅ Fetch job
+    $job = $this->db->where('id', $job_id)->get('jobs')->row_array();
+
+    // ✅ Fetch corporate
+    $corporate = $this->db->where('id', $job['employer_id'])->get('centers')->row_array();
+
+    // ✅ Fetch education
+    $education = $this->db->where('id', $job['education_id'])->get('isdm_education')->row_array();
+
+    if (!$student || !$job || !$corporate) {
+        $this->response('status', false);
+        $this->response('html', 'Missing data. Please retry.');
+        return;
     }
+
+    // Values
+    $student_email   = $student['email'];
+    $student_name    = $student['name'];
+    $job_title       = $job['job_title'] ?? 'N/A';
+    $corporate_name  = $corporate['institute_name'] ?? 'N/A';
+    $job_location    = $job['work_location'] ?? 'N/A';
+    $employment_type = $job['employment_type'] ?? 'N/A';
+    $education_name  = $education['qualification'] ?? 'N/A';
+
+    // ✅ Insert into DB (remove unnecessary keys)
+    unset(
+        $data['student_name'],
+        $data['student_email'],
+        $data['corporate_name'],
+        $data['job_title'],
+        $data['job_location'],
+        $data['employment_type'],
+        $data['education_name']
+    );
+    $this->db->insert('send_interview_request', $data);
+
+    // ✅ Email Content
+    $subject = "✉️ Great News! A Company is Interested in You – ISDM NxT";
+    $message = "
+        <p>Dear <strong>$student_name</strong>,</p>
+        <p>🎉 <strong>Congratulations!</strong></p>
+        <p>A corporate company has shown interest in your profile through the <strong>ISDM NxT Portal</strong>! 🚀</p>
+
+        <h3>🏢 Corporate Details:</h3>
+        <p><strong>Company Name:</strong> $corporate_name</p>
+        <p><strong>Job Title:</strong> $job_title</p>
+        <p><strong>Eligibility:</strong> $education_name</p>
+        <p><strong>Location:</strong> $job_location</p>
+        <p><strong>Employment Type:</strong> $employment_type</p>
+
+        <h3>🔗 Action Required:</h3>
+        <p>👉 Please login to your ISDM NxT Student Portal to view more details and respond to the opportunity promptly.</p>
+        <p><a href='https://isdmnext.in/student-login-' style='background: #007bff; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;'>Login Now</a></p>
+
+        <h4>📢 Important:</h4>
+        <ul>
+            <li>Check the corporate message or interview instructions (if any).</li>
+            <li>Respond quickly to secure your chance.</li>
+            <li>Prepare your documents and profile if needed.</li>
+        </ul>
+
+        <h4>🛠 Need Assistance?</h4>
+        <p>✉️ Email: info@isdmnext.in<br>
+        📞 Phone: 8320181598 / 8320876233<br>
+        🌐 Website: <a href='https://www.isdmnext.in'>www.isdmnext.in</a></p>
+
+        <p>Wishing you success and growth in your career journey! 🌟</p>
+        <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
+    ";
+
+    // ✅ Send Email
+    $this->load->library('email');
+    $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+    $this->email->to($student_email);
+    $this->email->subject($subject);
+    $this->email->message($message);
+    $this->email->set_mailtype('html');
+
+    if (!$this->email->send()) {
+        log_message('error', 'Failed to send interview email: ' . $this->email->print_debugger());
+        $this->response('status', false);
+        return;
+    }
+
+    $this->response('status', true);
+}
+
+
+
+
 
     function job_request_report(){
         $list = $this->db->
