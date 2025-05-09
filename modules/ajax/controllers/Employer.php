@@ -553,14 +553,6 @@ class Employer extends Ajax_Controller
             $education_id = isset($data['education_id']) ? $data['education_id'] : 'N/A';
             $highlights = isset($data['job_highlights']) ? $data['job_highlights'] : '';
     
-            $city = 'N/A';
-            if (!empty($data['city_id'])) {
-                $cityRow = $this->db->where('DISTRICT_ID', $data['city_id'])->get('isdm_district')->row_array();
-                if ($cityRow) {
-                    $city = $cityRow['DISTRICT_NAME'];
-                }
-            }
-    
             $education_name = 'N/A';
             if (!empty($education_id)) {
                 $eduRow = $this->db->where('id', $education_id)->get('isdm_education')->row_array();
@@ -571,30 +563,48 @@ class Employer extends Ajax_Controller
     
             $this->load->library('email');
     
+            // ✅ Fetch & match student profiles
+            $students = $this->db->select('s.name, s.email, sp.key_skills, sp.experience, sp.fluancy_in_english')
+                ->from('isdm_students as s')
+                ->join('isdm_student_profile as sp', 'sp.student_id = s.id', 'left')
+                ->where('s.status', 1)
+                ->get()->result_array();
+    
+            $matched_students = [];
+            $job_skills = json_decode($data['key_skills_text'], true);
+            foreach ($students as $s) {
+                $skill_match = false;
+                $exp_match = ($s['experience'] == $data['experience']);
+                $lang_match = ($s['fluancy_in_english'] == $data['fluancy_in_english']);
+                $student_skills = json_decode($s['key_skills'], true);
+    
+                if (is_array($job_skills) && is_array($student_skills)) {
+                    foreach ($job_skills as $jk) {
+                        if (in_array($jk, $student_skills)) {
+                            $skill_match = true;
+                            break;
+                        }
+                    }
+                }
+    
+                if ($skill_match || $exp_match || $lang_match) {
+                    $matched_students[] = $s;
+                }
+            }
+    
             // ✅ Admin Email
             $admin_subject = "🚀 New Job Posting Submitted by Corporate – Action Required | ISDM NxT";
             $admin_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
                 <h2>📢 New Job Vacancy Posted by Corporate</h2>
-                <p>Dear Admin Team,</p>
-                <p>Please review the job posting and take necessary actions.</p>
-                <h3>🏢 Corporate Details:</h3>
-                <ul>
-                    <li><strong>Company Name:</strong> {$employer['institute_name']}</li>
-                    <li><strong>Contact Person:</strong> {$employer['name']}</li>
-                    <li><strong>Corporate Email:</strong> {$employer['email']}</li>
-                </ul>
-                <h3>📄 Job Post Details:</h3>
-                <ul>
-                    <li><strong>Job Title:</strong> {$job_title}</li>
-                    <li><strong>Location:</strong> {$city}</li>
-                    <li><strong>Employment Type:</strong> {$employment_type}</li>
-                    <li><strong>Number of Openings:</strong> {$openings}</li>
-                    <li><strong>Eligibility Criteria:</strong> {$education_name}</li>
-                    <li><strong>Job Description Summary:</strong> {$highlights}</li>
-                </ul>
-                <p>🔔 Job ID: {$job_id}<br>📅 Posted on: " . date('d-m-Y H:i:s') . "</p>
-                <p>Best regards,<br>Team ISDM NxT</p>
-            </td></tr></table>";
+                <p><strong>Company:</strong> {$employer['institute_name']}<br>
+                <strong>Contact:</strong> {$employer['name']} | {$employer['email']}</p>
+                <p><strong>Job Title:</strong> {$job_title}<br>
+                <strong>Type:</strong> {$employment_type}<br>
+                <strong>Openings:</strong> {$openings}<br>
+                <strong>Eligibility:</strong> {$education_name}<br>
+                <strong>Description:</strong> {$highlights}</p>
+                <p><strong>Job ID:</strong> {$job_id} | <strong>Date:</strong> " . date('d-m-Y H:i:s') . "</p>
+                <p>Regards, <br>ISDM NxT</p></td></tr></table>";
     
             $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
             $this->email->to('keyurpatel3063@gmail.com');
@@ -602,20 +612,27 @@ class Employer extends Ajax_Controller
             $this->email->message($admin_message);
             $this->email->send();
     
-            // ✅ Corporate Email
+            // ✅ Corporate Email with matched student names
+            $matched_list = "";
+            foreach ($matched_students as $m) {
+                $matched_list .= "<li>{$m['name']}</li>";
+            }
+    
             $corporate_subject = "🎉 Your Job Posting Has Been Successfully Added – ISDM NxT";
             $corporate_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
                 <h2>🎉 Your Job Posting is Live!</h2>
                 <p>Dear {$employer['name']},</p>
-                <p>Thank you for submitting a job post. Here's the summary:</p>
+                <p>Your job has been posted. Below is the summary:</p>
                 <ul>
                     <li><strong>Job Title:</strong> {$job_title}</li>
-                    <li><strong>Location:</strong> {$city}</li>
                     <li><strong>Employment Type:</strong> {$employment_type}</li>
                     <li><strong>Openings:</strong> {$openings}</li>
+                    <li><strong>Posted On:</strong> " . date('d-m-Y H:i:s') . "</li>
                 </ul>
-                <p><strong>👉 Portal Link:</strong> <a href='https://isdmnext.in/employer/index'>Access Your Portal</a></p>
-                <p>Best regards,<br>Team ISDM NxT</p>
+                <h3>👥 Matched Candidates:</h3>
+                <ul>{$matched_list}</ul>
+                <p><a href='https://isdmnext.in/employer/index'>Access Your Portal</a></p>
+                <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
             </td></tr></table>";
     
             $this->email->clear();
@@ -625,34 +642,23 @@ class Employer extends Ajax_Controller
             $this->email->message($corporate_message);
             $this->email->send();
     
-            // ✅ Student Email - Sent via BCC
-            $students = $this->db
-                ->select('name, email')
-                ->where('status', 1)
-                ->get('isdm_students')
-                ->result_array();
-    
+            // ✅ Student Email
             $student_emails = array_column($students, 'email');
-    
-            log_message('info', 'Sending job alert to ' . count($student_emails) . ' students');
-    
             $student_subject = "🚀 New Job Opportunity Available on ISDM NxT – Apply Now";
             $student_message = "<table style='font-family: Arial, sans-serif; padding: 20px; width:100%;'><tr><td>
                 <h2>🚀 New Job Opportunity Just Posted!</h2>
-                <p>A new job has been posted on the ISDM NxT Portal:</p>
-                <ul>
-                    <li><strong>Job Title:</strong> {$job_title}</li>
-                    <li><strong>Company:</strong> {$employer['institute_name']}</li>
-                    <li><strong>Location:</strong> {$city}</li>
-                    <li><strong>Employment Type:</strong> {$employment_type}</li>
-                </ul>
-                <p><strong>Apply Now:</strong> <a href='https://isdmnext.in/student-login-'>https://isdmnext.in/student-login-</a></p>
-                <p>All the best!<br>Team ISDM NxT</p>
+                <p><strong>Job Title:</strong> {$job_title}<br>
+                <strong>Company:</strong> {$employer['institute_name']}<br>
+                <strong>Type:</strong> {$employment_type}<br>
+                <strong>Eligibility:</strong> {$education_name}<br>
+                <strong>Job Description:</strong> {$highlights}</p>
+                <p><a href='https://isdmnext.in/student-login-'>Apply Now on ISDM NxT Portal</a></p>
+                <p>Best of luck!<br>Team ISDM NxT</p>
             </td></tr></table>";
     
             $this->email->clear();
             $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
-            $this->email->to('isdmnxt@gmail.com');
+            $this->email->to('isdmnxt@gmail.com'); // dummy TO
             $this->email->bcc($student_emails);
             $this->email->subject($student_subject);
             $this->email->message($student_message);
@@ -661,6 +667,8 @@ class Employer extends Ajax_Controller
     
         $this->response('status', (bool)$job_id);
     }
+    
+    
     
     
     
@@ -745,7 +753,7 @@ class Employer extends Ajax_Controller
         }
     }
 
-    function get_db_matched_students(){
+    function get_db_matched_students(){ 
         $data                           = $this->post();
         $studentIds                     = explode(",",$data['studentIds']);
         $jobid                          = $data['jobid'];
@@ -796,6 +804,9 @@ class Employer extends Ajax_Controller
             . '<img class="mx-auto h-150px h-lg-200px" src="' . base_url('assets/media/illustrations/sigma-1/13.png') . '">'
         );
     }
+    
+    
+    
 
     function send_interview_request(){
         $data = $this->post();
