@@ -534,7 +534,7 @@ class Employer extends Ajax_Controller
             $this->response('msg', 'Job Updated Successfully.');
         } else {
             $data['status'] = 'open';
-            $data['added_by'] = 'admin';
+            $data['added_by'] = 'public_user'; // or leave blank if not needed
             $this->db->insert('jobs', $data);
             $job_id = $this->db->insert_id();
             $this->response('msg', 'Job Saved Successfully.');

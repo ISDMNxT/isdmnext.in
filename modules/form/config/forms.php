@@ -8,5 +8,6 @@ $config['forms'] = [
     'cerificate_verification' => 'Certificate verification Form',
     'search_center' => 'Search Study Center',
     'apply_franchise' => 'Franchise Apply Form',
-    'franchise_verification' => 'Franchise Verification Form'
+    'franchise_verification' => 'Franchise Verification Form',
+    'employer_mgmt' => 'Employer Register'
 ];
