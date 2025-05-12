@@ -845,48 +845,204 @@ private function send_email($to, $subject, $message)
     }
 
     function add_master_franchise()
-    {
-        $data = $this->post();
-        if(!empty($data['franchise_id'])){
-                $id = $data['franchise_id'];
-                $email = $data['email_id'];
-                unset($data['email_id']);
-                unset($data['franchise_id']);
-                unset($data['tdistrict']);
-                $data['email'] = $email;
-                if(!empty($_FILES['image']['name'])){
-                    $data['image'] = $this->file_up('image');
-                }
-                
-                $data['permission'] = json_encode($data['permission']);
-                
-                $this->response(
-                    'status',
-                    $this->db->where('id', $id)->update('centers', $data)
-                );
+{
+    $data = $this->post();
 
-        } else if(empty($data['franchise_id'])){
-            if ($this->form_validation->run('add_franchise_form')) {
-                $data['status'] = 1;
-                $data['added_by'] = 'admin';
-                $data['type'] = 'master_franchise';
-                $email = $data['email_id'];
-                unset($data['franchise_id']);
-                unset($data['email_id']);
-                unset($data['tdistrict']);
-                $data['email'] = $email;
-                $data['password'] = sha1($data['password']);
-                $data['image'] = $this->file_up('image');
-                $data['permission'] = json_encode($data['permission']);
-                
-                $this->response(
-                    'status',
-                    $this->db->insert('centers', $data)
-                );
-            } else
-                $this->response('html', $this->errors());
+    if (!empty($data['franchise_id'])) {
+        // ✅ UPDATE FLOW
+        $id = $data['franchise_id'];
+        $email = $data['email_id'];
+        unset($data['franchise_id'], $data['email_id'], $data['tdistrict']);
+        $data['email'] = $email;
+
+        // ✅ FETCH OLD DATA BEFORE UPDATE (Include center_full_address)
+        $existing = $this->db->select('name, email, institute_name, city_id, state_id, permission, center_full_address')
+            ->where('id', $id)
+            ->get('centers')
+            ->row();
+
+        $old_permissions = json_decode($existing->permission ?? '[]');
+
+        // ✅ Update image if provided
+        if (!empty($_FILES['image']['name'])) {
+            $data['image'] = $this->file_up('image');
+        }
+
+        $new_permissions = $data['permission'];
+        $data['permission'] = json_encode($new_permissions);
+
+        // ✅ Update DB
+        $this->response('status', $this->db->where('id', $id)->update('centers', $data));
+
+        // ✅ Compare & Send Email if permission changed
+        if ($old_permissions !== $new_permissions) {
+            $city_name = $existing->city_id;
+            $state_name = $existing->state_id;
+
+            // ✅ Assigned Centers Table
+            $assigned_centers = '';
+            if (!empty($new_permissions)) {
+                $centers = $this->db
+                    ->select('institute_name, center_full_address')
+                    ->from('centers')
+                    ->where_in('id', $new_permissions)
+                    ->get()
+                    ->result();
+
+                $assigned_centers .= "<table border='1' cellpadding='6' cellspacing='0' style='border-collapse: collapse; font-family: Arial, sans-serif;'>
+                    <thead style='background:#006699; color:#fff;'>
+                        <tr>
+                            <th>#</th>
+                            <th>Center Name</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>";
+                $i = 1;
+                foreach ($centers as $c) {
+                    $assigned_centers .= "<tr>
+                        <td>{$i}</td>
+                        <td>{$c->institute_name}</td>
+                        <td>{$c->center_full_address}</td>
+                    </tr>";
+                    $i++;
+                }
+                $assigned_centers .= "</tbody></table>";
+            }
+
+            // ✅ Compose Update Email
+            $subject = "📢 Your Assigned Centers Have Been Updated – ISDM NxT";
+            $message = "
+                <p>Dear <strong>{$existing->name}</strong>,</p>
+                <p>We want to inform you that your assigned centers under your Master Franchise at ISDM NxT have been updated.</p>
+
+                <h3>🏫 Updated Center Assignments:</h3>
+                {$assigned_centers}
+
+                <h3>📌 Your Franchise Info:</h3>
+                <p><strong>Institute Name:</strong> {$existing->institute_name}<br>
+                <strong>Location:</strong> {$existing->center_full_address}<br>
+                <strong>Franchise ID:</strong> {$id}</p>
+
+                <h4>📞 For Any Assistance:</h4>
+                <p>✉️ Email: info@isdmnext.in<br>
+                📞 Phone: 8320181598 / 8320876233</p>
+
+                <p>Keep growing and inspiring more institutes under your leadership!</p>
+                <p>Warm regards,<br><strong>Team ISDM NxT</strong><br><a href='https://isdmnext.in/'>https://isdmnext.in/</a></p>
+            ";
+
+            // ✅ Send Email
+            $this->load->library('email');
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to($existing->email);
+            $this->email->subject($subject);
+            $this->email->message($message);
+            $this->email->set_mailtype('html');
+            $this->email->send();
+        }
+    } else {
+        // ✅ ADD FLOW
+        if ($this->form_validation->run('add_franchise_form')) {
+            $data['status'] = 1;
+            $data['added_by'] = 'admin';
+            $data['type'] = 'master_franchise';
+            $email = $data['email_id'];
+            unset($data['franchise_id'], $data['email_id'], $data['tdistrict']);
+            $data['email'] = $email;
+            $data['password'] = sha1($data['password']);
+            $data['image'] = $this->file_up('image');
+            $permission_ids = $data['permission'];
+            $data['permission'] = json_encode($permission_ids);
+
+            $this->db->insert('centers', $data);
+            $insert_id = $this->db->insert_id();
+
+            if ($insert_id) {
+                $city_name = $data['city_id'];
+                $state_name = $data['state_id'];
+                $center_full_address = $data['center_full_address'] ?? 'N/A';
+
+                // ✅ Assigned Centers Table
+                $assigned_centers = '';
+                if (!empty($permission_ids)) {
+                    $centers = $this->db
+                        ->select('institute_name, center_full_address')
+                        ->from('centers')
+                        ->where_in('id', $permission_ids)
+                        ->get()
+                        ->result();
+
+                    $assigned_centers .= "<table border='1' cellpadding='6' cellspacing='0' style='border-collapse: collapse; font-family: Arial, sans-serif;'>
+                        <thead style='background:#006699; color:#fff;'>
+                            <tr>
+                                <th>#</th>
+                                <th>Center Name</th>
+                                <th>Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>";
+                    $i = 1;
+                    foreach ($centers as $c) {
+                        $assigned_centers .= "<tr>
+                            <td>{$i}</td>
+                            <td>{$c->institute_name}</td>
+                            <td>{$c->center_full_address}</td>
+                        </tr>";
+                        $i++;
+                    }
+                    $assigned_centers .= "</tbody></table>";
+                }
+
+                // ✅ Compose Welcome Email
+                $subject = "🎉 Congratulations! New Institute Added Under Your Network – ISDM NxT";
+                $message = "
+                    <p>Dear <strong>{$data['name']}</strong>,</p>
+                    <p>🎉 Congratulations!</p>
+                    <p>A new Institute has been successfully added under your Master Franchise Network at ISDM NxT.</p>
+
+                    <h3>📋 Institute Details:</h3>
+                    <p><strong>Institute Name:</strong> {$data['institute_name']}<br>
+                    <strong>Location:</strong> {$center_full_address}<br>
+                    <strong>Institute ID:</strong> {$insert_id}<br>
+                    <strong>Date of Joining:</strong> " . date('d-m-Y') . "</p>
+
+                    <h3>🏫 Assigned Centers:</h3>
+                    {$assigned_centers}
+
+                    <h3>💼 What's Next:</h3>
+                    <p>The new Institute will operate under your Master Franchise supervision.</p>
+                    <p>You will earn royalty income as per the ISDM NxT Royalty Model.</p>
+
+                    <h4>📞 For Any Assistance:</h4>
+                    <p>✉️ Email: info@isdmnext.in<br>
+                    📞 Phone: 8320181598 / 8320876233</p>
+
+                    <p>Together, let's empower education and skills across India! 🇮🇳</p>
+                    <p>Best regards,<br><strong>Team ISDM NxT</strong><br><a href='https://isdmnext.in/'>https://isdmnext.in/</a></p>
+                ";
+
+                // ✅ Send Email
+                $this->load->library('email');
+                $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+                $this->email->to($data['email']);
+                $this->email->subject($subject);
+                $this->email->message($message);
+                $this->email->set_mailtype('html');
+                $this->email->send();
+            }
+
+            $this->response('status', true);
+        } else {
+            $this->response('html', $this->errors());
         }
     }
+}
+
+
+
+
+
 
     function view_institute()
     {
