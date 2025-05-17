@@ -344,7 +344,7 @@ class Website extends Ajax_Controller
 
 private function send_center_emails($data, $plainPassword)
 {
-    $admin_email = 'keyurpatel3063@gmail.com';
+    $admin_email = 'isdmnxt@gmail.com';
     $center_email = $data['email'];
 
     $admin_subject = 'New Franchise Registration Notification – ISDM NxT';
@@ -360,7 +360,7 @@ private function send_center_emails($data, $plainPassword)
 
 private function compose_admin_email($data)
 {
-    $logo_url = base_url('upload/5a83cc0489_2.png');
+    $logo_url = base_url('upload/logo.png');
 
     $location = $this->db->select('STATE_NAME')->from('state')->where('STATE_ID', $data['state_id'])->get()->row()->STATE_NAME ?? 'N/A';
     $registration_date = date('d-m-Y');
@@ -403,11 +403,12 @@ private function compose_admin_email($data)
 
 private function compose_center_email($data, $plain_password)
 {
+    $logo_url = base_url('upload/logo.png');
     return '
     <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
       <tr>
         <td style="text-align: center;">
-          <img src="upload\5a83cc0489_2.png" alt="ISDM NxT Logo" style="height: 60px;" />
+          <img src="'.$logo_url.'" alt="ISDM NxT Logo" style="height: 60px;" />
           <h2 style="color: #004aad;">🎉 Congratulations! Franchise Registration Successfull</h2>
         </td>
       </tr>
@@ -445,7 +446,9 @@ private function send_email($to, $subject, $message)
     $this->email->subject($subject);
     $this->email->message($message);
 
-    $sent = $this->email->send();
+    if ($this->email->send()) {
+                 echo '<script>location.reload();</script>'; 
+            }
     $this->email->clear(); // Clear config for next use
 
     return $sent;
@@ -507,16 +510,16 @@ private function send_publish_email($student, $fields_updated = [])
     }
 
     $this->load->library('email');
-    $this->email->initialize([
-        'protocol'  => 'smtp',
-        'smtp_host' => 'ssl://smtp.gmail.com',
-        'smtp_port' => 465,
-        'smtp_user' => 'isdmnxt@gmail.com',
-        'smtp_pass' => 'zpeh ivui sqdt fvkz',
-        'mailtype'  => 'html',
-        'charset'   => 'utf-8',
-        'newline'   => "\r\n"
-    ]);
+    // $this->email->initialize([
+    //     'protocol'  => 'smtp',
+    //     'smtp_host' => 'ssl://smtp.gmail.com',
+    //     'smtp_port' => 465,
+    //     'smtp_user' => 'isdmnxt@gmail.com',
+    //     'smtp_pass' => 'zpeh ivui sqdt fvkz',
+    //     'mailtype'  => 'html',
+    //     'charset'   => 'utf-8',
+    //     'newline'   => "\r\n"
+    // ]);
 
     $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
     $this->email->to($student['email']);
@@ -1583,36 +1586,53 @@ private function send_publish_email($student, $fields_updated = [])
 
         $this->center_model->update_wallet($job['employer_id'], $close_balance);
         $this->db->update('send_interview_request', ['center_status' => 'approved', 'student_status' => 'approved'], ['id' => $id]);
+        $logo_url = base_url('upload/logo.png');
 
         // ✅ Email content
         $subject = "🎉 Student Has Accepted Your Request – ISDM NxT";
-        $message = "
-            <p>Dear <strong>{$job['center_name']}</strong>,</p>
-            <p>We are pleased to inform you that <strong>{$job['student_name']}</strong> has accepted your request/offer through the ISDM NxT Portal! 🚀</p>
-
-            <h3>👤 Student Details:</h3>
-            <p><strong>Name:</strong> {$job['student_name']}<br>
-            <strong>Registered Institute:</strong> {$job['student_center_name']}<br>
-            <strong>Contact Email:</strong> {$job['student_email']}<br>
-            <strong>Phone Number:</strong> {$job['contact_number']}</p>
-
-            <h3>📄 Job Details:</h3>
-            <p><strong>Job Title:</strong> {$job['job_title']}<br>
-            <strong>Location:</strong> {$job['work_location']}</p>
-
-            <h3>🔗 Next Steps:</h3>
-            <p>You can now schedule interviews, discussions, or onboarding procedures directly with the student.</p>
-            <p>Manage everything securely via your ISDM NxT Corporate Portal:</p>
-            <p><a href='https://isdmnext.in/corporate-login' style='background: #006699; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;'>Login to Portal</a></p>
-
-            <h4>🛠 Need Assistance?</h4>
-            <p>✉️ Email: info@isdmnext.in<br>
-            📞 Phone: 8320181598 / 8320876233<br>
-            🌐 Website: <a href='https://www.isdmnext.in'>www.isdmnext.in</a></p>
-
-            <p>Thank you for trusting ISDM NxT to support your recruitment needs! 🎯</p>
-            <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
-        ";
+        $message = '
+           <table style="width: 100%; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+              <tr>
+                <td style="text-align: center;">
+                  <img src="' . $logo_url . '" alt="ISDM NxT Logo" style="height: 60px;" />
+                  <h2 style="color: #004aad;">🎉 Great News! Student Accepted Your Job Offer</h2>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #ffffff; padding: 20px; border-radius: 6px;">
+                  <p>Hello <strong>' . $job['center_name'] . '</strong>,</p>
+                  <p>We are pleased to inform you that <strong>' . $job['student_name'] . '</strong> has accepted your request/offer through the ISDM NxT Portal! 🚀</p>
+            
+                  <h3 style="color: #004aad;">👤 Student Details:</h3>
+                  <ul>
+                    <li><strong>Name:</strong> ' . $job['student_name'] . '</li>
+                    <li><strong>Registered Institute:</strong> ' . $job['student_center_name'] . '</li>
+                    <li><strong>Contact Email:</strong> ' . $job['student_email'] . '</li>
+                    <li><strong>Phone Number:</strong> ' . $job['contact_number'] . '</li>
+                  </ul>
+            
+                  <h3 style="color: #004aad;">📄 Job Details:</h3>
+                  <ul>
+                    <li><strong>Job Title:</strong> ' . $job['job_title'] . '</li>
+                    <li><strong>Location:</strong> ' . $job['work_location'] . '</li>
+                  </ul>
+            
+                  <h3 style="color: #004aad;">🔗 Next Steps:</h3>
+                  <p>You can now schedule interviews, discussions, or onboarding procedures directly with the student.</p>
+                  <p>Manage everything securely via your ISDM NxT Corporate Portal:</p>
+                  <p><a href="https://isdmnext.in/corporate-login" style="background: #006699; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Login to Portal</a></p>
+            
+                  <p style="margin-top: 20px;"><strong>Need Help?</strong><br>
+                  ✉️ info@isdmnext.in<br>
+                  📞 8320181598 / 8320876233</p>
+            
+                  <p>Thank you for trusting ISDM NxT to support your recruitment needs! 🎯</p>
+                  <br>
+                  <p>Best regards,<br><strong>Team ISDM NxT</strong><br>
+                  <a href="https://www.isdmnext.in">www.isdmnext.in</a></p>
+                </td>
+              </tr>
+            </table>';
 
         // ✅ Send email
         $this->load->library('email');
@@ -1621,7 +1641,9 @@ private function send_publish_email($student, $fields_updated = [])
         $this->email->subject($subject);
         $this->email->message($message);
         $this->email->set_mailtype('html');
-        $this->email->send();
+         if ($this->email->send()) {
+                 echo '<script>location.reload();</script>'; 
+            }
 
     } else {
         // Update for other status like reject
@@ -1670,7 +1692,126 @@ private function send_publish_email($student, $fields_updated = [])
         echo json_encode(['status' => true, 'skills' => $skills]);
     }
     
-    
+  public function employer_mgmt()
+{
+    if ($this->form_validation->run('add_employer')) {
+        $data           = $this->post();
+        $email          = $data['email_id'];
+        $website        = $data['website'];
+        $about_company  = $data['about_company'];
+        $password_raw   = $data['password']; // For welcome email
+
+        unset($data['email_id'], $data['website'], $data['about_company']);
+
+        $data['status']     = 1;
+        $data['added_by']   = 'admin';
+        $data['email']      = $email;
+        $data['password']   = sha1($password_raw);
+        $data['image']      = $this->file_up('image');
+        $data['signature']  = $this->file_up('signature');
+        $data['logo']       = $this->file_up('logo');
+
+        $status = $this->db->insert('centers', $data);
+        $employer_id = $this->db->insert_id();
+
+        if ($employer_id) {
+            $this->db->insert('employer_info', [
+                'employer_id'   => $employer_id,
+                'about_company' => $about_company,
+                'website'       => $website
+            ]);
+
+            // ✅ Load Email Library
+            $this->load->library('email');
+
+            // ✅ Location Details
+            $state_name = $this->db->select('STATE_NAME')->where('STATE_ID', $data['state_id'])->get('state')->row('STATE_NAME');
+            $city_name  = $this->db->select('DISTRICT_NAME')->where('DISTRICT_ID', $data['city_id'])->get('district')->row('DISTRICT_NAME');
+            $registered_on = date('d-m-Y H:i:s');
+
+            // ✅ ADMIN EMAIL
+            $admin_subject = 'New Corporate Registration Received – ISDM NxT Portal Alert';
+            $admin_body = "
+                <p>Dear Admin Team,</p>
+                <p>📢 A new corporate client has successfully completed their registration on the ISDM NxT Portal.</p>
+                <h3>🏢 Corporate Details:</h3>
+                <ul>
+                    <li><strong>Company Name:</strong> {$data['institute_name']}</li>
+                    <li><strong>Registered Email:</strong> {$email}</li>
+                    <li><strong>Contact Person:</strong> {$data['name']}</li>
+                    <li><strong>Phone Number:</strong> {$data['contact_number']}</li>
+                    <li><strong>Registration Date:</strong> {$registered_on}</li>
+                    <li><strong>Location:</strong> {$city_name}, {$state_name}</li>
+                </ul>
+                <h3>🛠 Next Actions:</h3>
+                <ol>
+                    <li>Verify corporate registration details (if required)</li>
+                    <li>Ensure portal login access is active</li>
+                    <li>Assist with onboarding</li>
+                    <li>Monitor job post activity</li>
+                </ol>
+                <p>🔔 Corporate ID: <strong>{$employer_id}</strong></p>
+                <p>📞 Support: info@isdmnext.in | 8320181598 / 8320876233</p>
+                <p>Best regards,<br>ISDM NxT – Admin Team</p>
+            ";
+
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to('isdmnxt@gmail.com');
+            $this->email->subject($admin_subject);
+            $this->email->message($admin_body);
+            $this->email->set_mailtype('html');
+            $this->email->send();
+
+            // ✅ CORPORATE EMAIL
+            $corporate_subject = 'Welcome to ISDM NxT – Your Gateway to Skilled Talent! 🎓💼';
+            $corporate_body = "
+                <p>Dear {$data['name']},</p>
+                <p>🎉 Welcome to the ISDM NxT Talent Network!</p>
+                <p>Your corporate registration has been completed successfully! 🚀</p>
+
+                <h3>🔑 Portal Login Details:</h3>
+                <ul>
+                    <li><strong>Portal:</strong> <a href='https://isdmnext.in/employer/index'>Click Here</a></li>
+                    <li><strong>Username:</strong> {$email}</li>
+                    <li><strong>Password:</strong> {$password_raw}</li>
+                </ul>
+
+                <h3>🎯 Key Features for You:</h3>
+                <ul>
+                    <li>Access Student Profiles</li>
+                    <li>Post Job Openings</li>
+                    <li>Schedule Campus Interviews</li>
+                    <li>Track Applications</li>
+                    <li>Skill Matchmaking</li>
+                </ul>
+
+                <p>🛠 Need Help Getting Started?</p>
+                <p>✉ Email: info@isdmnext.in<br>
+                   📞 Phone: 8320181598 / 8320876233<br>
+                   🌐 Website: <a href='https://www.isdmnext.in'>www.isdmnext.in</a></p>
+
+                <p>Thank you for partnering with ISDM NxT!</p>
+                <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
+            ";
+
+            $this->email->clear();
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to($email);
+            $this->email->subject($corporate_subject);
+            $this->email->message($corporate_body);
+            $this->email->set_mailtype('html');
+            if($this->email->send())
+            {
+                echo"<script>location.reload();</script>";
+            }
+            
+        }
+
+        $this->response('status', true);
+    } else {
+        $this->response('html', $this->errors());
+    }
+}
     
     
 }

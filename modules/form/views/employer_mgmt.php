@@ -129,7 +129,9 @@
                     </div>
                 </div>
                 <div class="card-footer">
-                    {publish_button}
+                    <div class="btn-wrapper btn-wrapper2">
+                                <?= $this->ki_theme->set_class('btn btn-outline-success')->button('<span><i class="fa fa-save"></i> Submit</span>', 'submit') ?>
+                            </div>
                 </div>
             </div>
 

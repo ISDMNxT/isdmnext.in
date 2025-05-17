@@ -161,6 +161,25 @@ $(document).on('ready', function () {
             showResponseError(res);
         });
     });
+    //add employer
+    $(document).on('submit', '#add_employer_form', function (e) {
+    e.preventDefault();
+
+    $.AryaAjax({
+        url: 'website/employer_mgmt', // Change this to the correct route if different
+        data: new FormData(this),
+        processData: false,
+        contentType: false
+    }).then((res) => {
+        if (res.status) {
+            SwalSuccess('Added', 'Employer registered successfully!');
+            location.reload();
+        }
+        showResponseError(res);
+    });
+});
+    
+    
     $(document).on('keyup', '#add_center_form [name="institute_name"]', function () {
         var roll_no = generateRollNumberPrefix(this.value);
         // console.log(roll_no);

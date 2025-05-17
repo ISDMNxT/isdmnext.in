@@ -199,6 +199,7 @@
                                         <div class="form-group">
                                             <input type="file" class="form-control" required name="signature"
                                                 id="signature">
+                                                 <span class="text-danger">Upload Signature With Transparent Background</span>
                                         </div>
                                     </div>
                                     <?php

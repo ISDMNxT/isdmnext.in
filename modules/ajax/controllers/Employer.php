@@ -363,33 +363,126 @@ class Employer extends Ajax_Controller
         }
     }
 
-    function employer_mgmt(){
-        if ($this->form_validation->run('add_employer')) {
-            $data                   = $this->post();
-            $email                  = $data['email_id'];
-            $website                = $data['website'];
-            $about_company          = $data['about_company'];
-            unset($data['email_id']);
-            unset($data['website']);
-            unset($data['about_company']);
+    public function employer_mgmt()
+{
+    if ($this->form_validation->run('add_employer')) {
+        $data           = $this->post();
+        $email          = $data['email_id'];
+        $website        = $data['website'];
+        $about_company  = $data['about_company'];
+        $password_raw   = $data['password']; // For welcome email
 
-            $data['status']         = 1;
-            $data['added_by']       = 'admin';
-            $data['email']          = $email;
-            $data['password']       = sha1($data['password']);
-            $data['image']          = $this->file_up('image');
-            $data['signature']      = $this->file_up('signature');
-            $data['logo']           = $this->file_up('logo');
-            $status                 = $this->db->insert('centers', $data);
-            $employer_id            = $this->db->insert_id();
-            if($employer_id){
-                $this->db->insert('employer_info', ['employer_id' => $employer_id,'about_company' => $about_company, 'website' => $website]);
+        unset($data['email_id'], $data['website'], $data['about_company']);
+
+        $data['status']     = 1;
+        $data['added_by']   = 'admin';
+        $data['email']      = $email;
+        $data['password']   = sha1($password_raw);
+        $data['image']      = $this->file_up('image');
+        $data['signature']  = $this->file_up('signature');
+        $data['logo']       = $this->file_up('logo');
+
+        $status = $this->db->insert('centers', $data);
+        $employer_id = $this->db->insert_id();
+
+        if ($employer_id) {
+            $this->db->insert('employer_info', [
+                'employer_id'   => $employer_id,
+                'about_company' => $about_company,
+                'website'       => $website
+            ]);
+
+            // ✅ Load Email Library
+            $this->load->library('email');
+
+            // ✅ Location Details
+            $state_name = $this->db->select('STATE_NAME')->where('STATE_ID', $data['state_id'])->get('state')->row('STATE_NAME');
+            $city_name  = $this->db->select('DISTRICT_NAME')->where('DISTRICT_ID', $data['city_id'])->get('district')->row('DISTRICT_NAME');
+            $registered_on = date('d-m-Y H:i:s');
+
+            // ✅ ADMIN EMAIL
+            $admin_subject = 'New Corporate Registration Received – ISDM NxT Portal Alert';
+            $admin_body = "
+                <p>Dear Admin Team,</p>
+                <p>📢 A new corporate client has successfully completed their registration on the ISDM NxT Portal.</p>
+                <h3>🏢 Corporate Details:</h3>
+                <ul>
+                    <li><strong>Company Name:</strong> {$data['institute_name']}</li>
+                    <li><strong>Registered Email:</strong> {$email}</li>
+                    <li><strong>Contact Person:</strong> {$data['name']}</li>
+                    <li><strong>Phone Number:</strong> {$data['contact_number']}</li>
+                    <li><strong>Registration Date:</strong> {$registered_on}</li>
+                    <li><strong>Location:</strong> {$city_name}, {$state_name}</li>
+                </ul>
+                <h3>🛠 Next Actions:</h3>
+                <ol>
+                    <li>Verify corporate registration details (if required)</li>
+                    <li>Ensure portal login access is active</li>
+                    <li>Assist with onboarding</li>
+                    <li>Monitor job post activity</li>
+                </ol>
+                <p>🔔 Corporate ID: <strong>{$employer_id}</strong></p>
+                <p>📞 Support: info@isdmnext.in | 8320181598 / 8320876233</p>
+                <p>Best regards,<br>ISDM NxT – Admin Team</p>
+            ";
+
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to('isdmnxt@gmail.com');
+            $this->email->subject($admin_subject);
+            $this->email->message($admin_body);
+            $this->email->set_mailtype('html');
+            $this->email->send();
+
+            // ✅ CORPORATE EMAIL
+            $corporate_subject = 'Welcome to ISDM NxT – Your Gateway to Skilled Talent! 🎓💼';
+            $corporate_body = "
+                <p>Dear {$data['name']},</p>
+                <p>🎉 Welcome to the ISDM NxT Talent Network!</p>
+                <p>Your corporate registration has been completed successfully! 🚀</p>
+
+                <h3>🔑 Portal Login Details:</h3>
+                <ul>
+                    <li><strong>Portal:</strong> <a href='https://isdmnext.in/employer/index'>Click Here</a></li>
+                    <li><strong>Username:</strong> {$email}</li>
+                    <li><strong>Password:</strong> {$password_raw}</li>
+                </ul>
+
+                <h3>🎯 Key Features for You:</h3>
+                <ul>
+                    <li>Access Student Profiles</li>
+                    <li>Post Job Openings</li>
+                    <li>Schedule Campus Interviews</li>
+                    <li>Track Applications</li>
+                    <li>Skill Matchmaking</li>
+                </ul>
+
+                <p>🛠 Need Help Getting Started?</p>
+                <p>✉ Email: info@isdmnext.in<br>
+                   📞 Phone: 8320181598 / 8320876233<br>
+                   🌐 Website: <a href='https://www.isdmnext.in'>www.isdmnext.in</a></p>
+
+                <p>Thank you for partnering with ISDM NxT!</p>
+                <p>Best regards,<br><strong>Team ISDM NxT</strong></p>
+            ";
+
+            $this->email->clear();
+            $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
+            $this->email->to($email);
+            $this->email->subject($corporate_subject);
+            $this->email->message($corporate_body);
+            $this->email->set_mailtype('html');
+            if($this->email->send())
+            {
+                echo"<script>location.reload();</script>";
             }
-            $this->response('status', $status);
-        } else{
-            $this->response('html', $this->errors());
+            
         }
+
+        $this->response('status', true);
+    } else {
+        $this->response('html', $this->errors());
     }
+}
 
     function list_employer(){
         $this->response('data', 
@@ -534,7 +627,7 @@ class Employer extends Ajax_Controller
             $this->response('msg', 'Job Updated Successfully.');
         } else {
             $data['status'] = 'open';
-            $data['added_by'] = 'public_user'; // or leave blank if not needed
+            $data['added_by'] = 'admin';
             $this->db->insert('jobs', $data);
             $job_id = $this->db->insert_id();
             $this->response('msg', 'Job Saved Successfully.');
@@ -607,10 +700,12 @@ class Employer extends Ajax_Controller
                 <p>Regards, <br>ISDM NxT</p></td></tr></table>";
     
             $this->email->from('isdmnxt@gmail.com', 'ISDM NxT');
-            $this->email->to('keyurpatel3063@gmail.com');
+            $this->email->to('isdmnxt@gmail.com');
             $this->email->subject($admin_subject);
             $this->email->message($admin_message);
-            $this->email->send();
+            if($this->email->send()){
+                 echo '<script>location.reload();</script>'; 
+            }
     
             // ✅ Corporate Email with matched student names
             $matched_list = "";
@@ -640,7 +735,9 @@ class Employer extends Ajax_Controller
             $this->email->to($employer['email']);
             $this->email->subject($corporate_subject);
             $this->email->message($corporate_message);
-            $this->email->send();
+            if($this->email->send()){
+                 echo '<script>location.reload();</script>'; 
+            }
     
             // ✅ Student Email
             $student_emails = array_column($students, 'email');
@@ -662,7 +759,9 @@ class Employer extends Ajax_Controller
             $this->email->bcc($student_emails);
             $this->email->subject($student_subject);
             $this->email->message($student_message);
-            $this->email->send();
+            if($this->email->send()){
+                 echo '<script>location.reload();</script>'; 
+            }
         }
     
         $this->response('status', (bool)$job_id);
@@ -895,10 +994,8 @@ class Employer extends Ajax_Controller
     $this->email->message($message);
     $this->email->set_mailtype('html');
 
-    if (!$this->email->send()) {
-        log_message('error', 'Failed to send interview email: ' . $this->email->print_debugger());
-        $this->response('status', false);
-        return;
+    if ($this->email->send()) {
+         echo '<script>location.reload();</script>'; 
     }
 
     $this->response('status', true);

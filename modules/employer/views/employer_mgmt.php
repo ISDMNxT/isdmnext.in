@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-md-12">
-        <form id="add_employer_form" action="" method="POST" autocomplete="off">
+        <form id="add_employer_form" action=""  method="POST" autocomplete="off">
             <div class="{card_class}">
                 <div class="card-header collapsible cursor-pointer rotate" data-bs-toggle="collapse"
                     data-bs-target="#kt_docs_card_collapsible">

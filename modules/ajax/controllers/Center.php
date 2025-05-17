@@ -496,63 +496,103 @@ private function send_email($to, $subject, $message)
         }
     }
     function get_course_assign_form()
-    {
-        $this->get_short_profile();
-        $get = $this->center_model->get_assign_courses($this->post("id"));
-        $assignedCourses = [];
-        if ($get->num_rows()) {
-            $assignedCourses = $get->result_array();
+{
+    $center_id = $this->post("id");
+    $category_id = $this->post("category_id");
+    $category_name = '';
+    if (!empty($category_id)) {
+        $category = $this->db->get_where('isdm_course_category', ['id' => $category_id])->row();
+        if ($category) {
+            $category_name = $category->title; // Use 'title' instead of 'name'
         }
-        $this->set_data('assignedCourses', $assignedCourses);
-        $this->response('assignedCourses', $assignedCourses);
-        $this->response('status', true);
-        $this->set_data("all_courses", $this->db->where('status', 1)->where('isDeleted', '0')->get('course')->result_array());
-        $this->response('html', $this->template('assign-course-center'));
+
     }
+
+    $this->set_data('category_name', $category_name); // for use in view
+    $this->response('category_name', $category_name); // for JS (optional)
+
+
+
+    // Load profile
+    $this->get_short_profile();
+
+    // Fetch already assigned courses for center
+    $get = $this->center_model->get_assign_courses($center_id);
+    $assignedCourses = [];
+    if ($get->num_rows()) {
+        $assignedCourses = $get->result_array();
+    }
+    $this->set_data('assignedCourses', $assignedCourses);
+    $this->response('assignedCourses', $assignedCourses);
+    $this->response('status', true);
+
+    // Fetch only active, non-deleted courses
+    $this->db->where('status', 1)->where('isDeleted', '0');
+    if (!empty($category_id)) {
+        $this->db->where('category_id', $category_id); // Filter by category if selected
+    }
+    $courses = $this->db->get('course')->result_array();
+
+    $this->set_data("all_courses", $courses);
+    $this->response('html', $this->template('assign-course-center'));
+}
+
     function assign_course()
-    {
-        $where = $data = $this->post();
-        if($data['type'] == 'all'){
-            $c_ids = $this->db->where('status', 1)->where('isDeleted', '0')->get('course')->result_array();
+{
+    $where = $data = $this->post();
 
-            foreach($c_ids as $key => $val){
-                $where = [];
-                $where['center_id'] = $data['center_id'];
-                $where['course_id'] = $val['id'];
-                $get = $this->db->where($where)->get('center_courses');
-                $newData = [];
-                $newData['center_id'] = $data['center_id'];
-                $newData['course_id'] = $val['id'];
-                $newData['course_fee'] = $val['fees'];
-                $newData['status'] = 1;
-                $newData['isDeleted'] = 0;
+    if ($data['type'] == 'all') {
+        // Apply optional category filter
+        $this->db->where('status', 1)->where('isDeleted', '0');
+        if (!empty($data['category_id'])) {
+            $this->db->where('category_id', $data['category_id']); // category-based filter
+        }
+        $c_ids = $this->db->get('course')->result_array();
 
-                if ($get->num_rows()) {
-                    $this->db->update('center_courses', $newData, ['id' => $get->row('id')]);
-                } else {
-                    $this->db->insert('center_courses', $newData);
-                }
-            }
+        foreach ($c_ids as $val) {
+            $check = [
+                'center_id' => $data['center_id'],
+                'course_id' => $val['id'],
+            ];
+            $existing = $this->db->where($check)->get('center_courses');
 
-        } else {
-            unset($data['type']);
-            unset($where['type']);
-            if (isset($where['course_fee']))
-                unset($where['course_fee']);
-            if (isset($where['isDeleted']))
-                unset($where['isDeleted']);
-            $get = $this->db->where($where)->get('center_courses');
-            $data['status'] = 1;
-            if ($get->num_rows()) {
-                $this->db->update('center_courses', $data, ['id' => $get->row('id')]);
+            $newData = [
+                'center_id'   => $data['center_id'],
+                'course_id'   => $val['id'],
+                'course_fee'  => $val['fees'],
+                'status'      => 1,
+                'isDeleted'   => 0
+            ];
+
+            if ($existing->num_rows()) {
+                $this->db->update('center_courses', $newData, ['id' => $existing->row('id')]);
             } else {
-                if (!$data['isDeleted'])
-                    $this->db->insert('center_courses', $data);
+                $this->db->insert('center_courses', $newData);
             }
         }
-        
-        $this->response('status', true);
+
+    } else {
+        // Single course assignment
+        unset($data['type'], $where['type']);
+
+        if (isset($where['course_fee'])) unset($where['course_fee']);
+        if (isset($where['isDeleted'])) unset($where['isDeleted']);
+
+        $existing = $this->db->where($where)->get('center_courses');
+        $data['status'] = 1;
+
+        if ($existing->num_rows()) {
+            $this->db->update('center_courses', $data, ['id' => $existing->row('id')]);
+        } else {
+            if (!$data['isDeleted']) {
+                $this->db->insert('center_courses', $data);
+            }
+        }
     }
+
+    $this->response('status', true);
+}
+
     function list()
     {
         if($this->center_model->isMaster()) {
